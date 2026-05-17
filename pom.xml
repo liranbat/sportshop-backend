@@ -20,6 +20,7 @@
 		<java.version>21</java.version>
 		<openapi-generator.version>7.20.0</openapi-generator.version>
 		<spring-dotenv.version>5.1.0</spring-dotenv.version>
+		<jjwt.version>0.12.6</jjwt.version>
 		<openapi.specs.dir>${project.basedir}/../../sportshop-swagger</openapi.specs.dir>
 		<openapi.specs.staged>${project.build.directory}/openapi</openapi.specs.staged>
 	</properties>
@@ -49,6 +50,28 @@
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-data-jpa</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-security</artifactId>
+		</dependency>
+		
+		<dependency>
+			<groupId>io.jsonwebtoken</groupId>
+			<artifactId>jjwt-api</artifactId>
+			<version>${jjwt.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>io.jsonwebtoken</groupId>
+			<artifactId>jjwt-impl</artifactId>
+			<version>${jjwt.version}</version>
+			<scope>runtime</scope>
+		</dependency>
+		<dependency>
+			<groupId>io.jsonwebtoken</groupId>
+			<artifactId>jjwt-jackson</artifactId>
+			<version>${jjwt.version}</version>
+			<scope>runtime</scope>
 		</dependency>
 
 		<dependency>
@@ -128,6 +151,32 @@
 							<generatorName>spring</generatorName>
 							<apiPackage>com.java.sadna.backend.sportshop.api.generated.categories.api</apiPackage>
 							<modelPackage>com.java.sadna.backend.sportshop.api.generated.categories.model</modelPackage>
+							<modelNameSuffix>Dto</modelNameSuffix>
+							<generateApiTests>false</generateApiTests>
+							<generateApiDocumentation>false</generateApiDocumentation>
+							<generateModelTests>false</generateModelTests>
+							<generateModelDocumentation>false</generateModelDocumentation>
+							<generateSupportingFiles>false</generateSupportingFiles>
+							<configOptions>
+								<interfaceOnly>true</interfaceOnly>
+								<useSpringBoot3>true</useSpringBoot3>
+								<useTags>true</useTags>
+								<openApiNullable>false</openApiNullable>
+								<skipDefaultInterface>true</skipDefaultInterface>
+								<documentationProvider>none</documentationProvider>
+							</configOptions>
+						</configuration>
+					</execution>
+					<execution>
+						<id>generate-auth-api</id>
+						<goals>
+							<goal>generate</goal>
+						</goals>
+						<configuration>
+							<inputSpec>${openapi.specs.staged}/auth-api.yaml</inputSpec>
+							<generatorName>spring</generatorName>
+							<apiPackage>com.java.sadna.backend.sportshop.api.generated.auth.api</apiPackage>
+							<modelPackage>com.java.sadna.backend.sportshop.api.generated.auth.model</modelPackage>
 							<modelNameSuffix>Dto</modelNameSuffix>
 							<generateApiTests>false</generateApiTests>
 							<generateApiDocumentation>false</generateApiDocumentation>
