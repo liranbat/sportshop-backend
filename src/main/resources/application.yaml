@@ -22,6 +22,11 @@ spring:
     locations: classpath:db/migration
     baseline-on-migrate: false
 
+management:
+  tracing:
+    sampling:
+      probability: 1.0
+
 app:
   cors:
     allowed-origins: ${SPORTSHOP_CORS_ALLOWED_ORIGINS:http://localhost:5173}
