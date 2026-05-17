@@ -9,9 +9,6 @@ import jakarta.persistence.Table;
 
 import java.time.OffsetDateTime;
 
-// Backs the refresh_tokens table. The UNIQUE(user_id) constraint in V4 enforces
-// the single-session-per-user invariant from project-summary §3.1, so login /
-// refresh / logout always operate on at most one row per user.
 @Entity
 @Table(name = "refresh_tokens")
 public class RefreshTokenEntity {

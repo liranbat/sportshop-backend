@@ -62,13 +62,14 @@ public class AuthService {
 
     @Transactional
     public User register(RegisterRequestDto dto) {
-        if (userRepository.existsByEmail(dto.getEmail())) {
+        String email = normalizeEmail(dto.getEmail());
+        if (userRepository.existsByEmail(email)) {
             throw new ConflictException(EMAIL_TAKEN_MESSAGE);
         }
         UserEntity entity = new UserEntity(
                 dto.getFirstName(),
                 dto.getLastName(),
-                dto.getEmail(),
+                email,
                 dto.getPhone(),
                 passwordEncoder.encode(dto.getPassword()),
                 false
@@ -79,7 +80,7 @@ public class AuthService {
 
     @Transactional
     public User login(LoginRequestDto dto, HttpServletResponse response) {
-        UserEntity entity = userRepository.findByEmailAndDeletedFalse(dto.getEmail())
+        UserEntity entity = userRepository.findByEmailAndDeletedFalse(normalizeEmail(dto.getEmail()))
                 .orElseThrow(() -> new UnauthorizedException(INVALID_CREDENTIALS_MESSAGE));
         if (!passwordEncoder.matches(dto.getPassword(), entity.getPasswordHash())) {
             throw new UnauthorizedException(INVALID_CREDENTIALS_MESSAGE);
@@ -165,5 +166,9 @@ public class AuthService {
         byte[] bytes = new byte[REFRESH_TOKEN_BYTES];
         SECURE_RANDOM.nextBytes(bytes);
         return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
+    }
+
+    private static String normalizeEmail(String raw) {
+        return raw == null ? null : raw.trim().toLowerCase();
     }
 }
