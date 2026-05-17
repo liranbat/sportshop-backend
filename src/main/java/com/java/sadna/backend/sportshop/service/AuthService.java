@@ -11,6 +11,7 @@ import com.java.sadna.backend.sportshop.mapper.UserEntityToUserMapper;
 import com.java.sadna.backend.sportshop.model.User;
 import com.java.sadna.backend.sportshop.repository.RefreshTokenRepository;
 import com.java.sadna.backend.sportshop.repository.UserRepository;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
@@ -96,7 +97,11 @@ public class AuthService {
     }
 
     @Transactional
-    public User refresh(String refreshTokenValue, HttpServletResponse response) {
+    public User refresh(HttpServletRequest request, HttpServletResponse response) {
+        // Missing / unknown / expired all surface the same message so an attacker
+        // probing /auth/refresh cannot tell whether a cookie was even present.
+        String refreshTokenValue = cookieService.readRefreshCookie(request)
+                .orElseThrow(() -> new UnauthorizedException(INVALID_REFRESH_MESSAGE));
         RefreshTokenEntity row = refreshTokenRepository.findByToken(refreshTokenValue)
                 .orElseThrow(() -> new UnauthorizedException(INVALID_REFRESH_MESSAGE));
         if (row.getExpiresAt().isBefore(OffsetDateTime.now())) {

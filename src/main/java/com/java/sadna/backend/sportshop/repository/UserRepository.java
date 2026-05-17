@@ -11,8 +11,5 @@ public interface UserRepository extends JpaRepository<UserEntity, Long> {
 
     Optional<UserEntity> findByIdAndDeletedFalse(Long id);
 
-    // existsByEmail (not existsByEmailAndDeletedFalse): emails stay reserved
-    // across soft-delete per project-summary §3.10, so register's "email
-    // already taken" check must still trip on soft-deleted rows.
     boolean existsByEmail(String email);
 }

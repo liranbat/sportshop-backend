@@ -16,8 +16,6 @@ import java.util.Date;
 import java.util.Optional;
 
 // Issues + parses the access-token JWT carried by the `access_token` cookie.
-// Refresh tokens are intentionally NOT JWTs -- they are opaque random strings
-// looked up against the refresh_tokens table by AuthService.
 @Service
 public class JwtService {
 
@@ -38,7 +36,7 @@ public class JwtService {
         if (secretBytes.length < MIN_SECRET_BYTES) {
             throw new IllegalStateException(
                     "SPORTSHOP_JWT_SECRET must be at least " + MIN_SECRET_BYTES
-                            + " UTF-8 bytes (got " + secretBytes.length + "). Generate one via `openssl rand -base64 48` and set it in the backend .env."
+                            + " UTF-8 bytes (got " + secretBytes.length + ")."
             );
         }
         this.signingKey = Keys.hmacShaKeyFor(secretBytes);

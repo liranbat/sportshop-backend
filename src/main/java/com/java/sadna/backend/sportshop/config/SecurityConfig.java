@@ -16,10 +16,10 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 // Owns the cross-cutting bits (stateless sessions, JWT cookie filter, CSRF/Basic/formLogin
-// off, CORS) and delegates per-endpoint authorization to @PreAuthorize on each controller
-// method via @EnableMethodSecurity. anyRequest().permitAll() is safe ONLY because every
-// controller method is required to carry an explicit @PreAuthorize -- a method without
-// one would be publicly callable.
+// off, CORS). Authorization is delegated to controller methods via @EnableMethodSecurity:
+// anyRequest().permitAll() leaves every endpoint open by default, and methods opt in to
+// gating with @PreAuthorize("isAuthenticated()") or @PreAuthorize("hasRole('ADMIN')").
+// Convention: no annotation = public; add @PreAuthorize whenever an endpoint should NOT be.
 //
 // CSRF stays off while the API is JSON-only and both auth cookies are SameSite=Lax;
 // re-enable as a signed double-submit token on multipart routes when image upload lands.

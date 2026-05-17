@@ -5,7 +5,6 @@ import com.java.sadna.backend.sportshop.api.generated.categories.model.CategoryD
 import com.java.sadna.backend.sportshop.mapper.CategoryToCategoryDtoMapper;
 import com.java.sadna.backend.sportshop.service.CategoryService;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -23,7 +22,6 @@ public class CategoryController implements CategoriesApi {
     }
 
     @Override
-    @PreAuthorize("permitAll()")
     public ResponseEntity<List<CategoryDto>> listActiveCategories() {
         List<CategoryDto> body = categoryService.listActive().stream()
                 .map(categoryToCategoryDtoMapper::map)

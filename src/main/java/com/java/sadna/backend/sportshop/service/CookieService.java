@@ -1,10 +1,14 @@
 package com.java.sadna.backend.sportshop.service;
 
 import com.java.sadna.backend.sportshop.config.AppProperties;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.ResponseCookie;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
+import java.util.Arrays;
+import java.util.Optional;
 
 @Service
 public class CookieService {
@@ -52,6 +56,17 @@ public class CookieService {
         return baseBuilder(REFRESH_COOKIE_NAME, "", REFRESH_COOKIE_PATH)
                 .maxAge(0)
                 .build();
+    }
+
+    public Optional<String> readRefreshCookie(HttpServletRequest request) {
+        Cookie[] cookies = request.getCookies();
+        if (cookies == null) {
+            return Optional.empty();
+        }
+        return Arrays.stream(cookies)
+                .filter(cookie -> REFRESH_COOKIE_NAME.equals(cookie.getName()))
+                .map(Cookie::getValue)
+                .findFirst();
     }
 
     private ResponseCookie.ResponseCookieBuilder baseBuilder(String name, String value, String path) {
