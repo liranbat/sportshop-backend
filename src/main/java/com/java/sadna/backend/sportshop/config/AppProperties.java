@@ -7,10 +7,12 @@ public class AppProperties {
 
     private final CorsProperties cors;
     private final ImagesProperties images;
+    private final AuthProperties auth;
 
-    public AppProperties(CorsProperties cors, ImagesProperties images) {
+    public AppProperties(CorsProperties cors, ImagesProperties images, AuthProperties auth) {
         this.cors = cors;
         this.images = images;
+        this.auth = auth;
     }
 
     public CorsProperties getCors() {
@@ -19,5 +21,9 @@ public class AppProperties {
 
     public ImagesProperties getImages() {
         return images;
+    }
+
+    public AuthProperties getAuth() {
+        return auth;
     }
 }

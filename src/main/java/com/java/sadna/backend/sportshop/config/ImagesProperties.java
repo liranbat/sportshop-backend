@@ -1,6 +1,5 @@
 package com.java.sadna.backend.sportshop.config;
 
-// bound recursively by Spring from AppProperties — no @ConfigurationProperties of its own
 public class ImagesProperties {
 
     private final String urlPrefix;

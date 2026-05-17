@@ -30,3 +30,8 @@ app:
     category-prefix: categories
     product-prefix: products
     local-dir: ${SPORTSHOP_IMAGES_LOCAL_DIR:../../images}
+  auth:
+    secret: ${SPORTSHOP_JWT_SECRET}
+    access-token-ttl: ${SPORTSHOP_ACCESS_TOKEN_TTL:PT15M}
+    refresh-token-ttl: ${SPORTSHOP_REFRESH_TOKEN_TTL:P14D}
+    cookie-secure: ${SPORTSHOP_AUTH_COOKIE_SECURE:false}
