@@ -2,6 +2,7 @@ package com.java.sadna.backend.sportshop.exception;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
@@ -18,15 +19,20 @@ public class GlobalExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
-    // placeholder until real tracing (OpenTelemetry / Micrometer Tracing) is wired in
-    private static final String TRACE_ID_PLACEHOLDER = "00000000-0000-0000-0000-000000000000";
+    private static final String MDC_TRACE_ID = "traceId";
+    private static final String TRACE_ID_UNKNOWN = "unknown";
+
+    private static String currentTraceId() {
+        String id = MDC.get(MDC_TRACE_ID);
+        return (id != null && !id.isEmpty()) ? id : TRACE_ID_UNKNOWN;
+    }
 
     @ExceptionHandler(ApiException.class)
     public ResponseEntity<ApiError> handleApi(ApiException e) {
         log.warn("API exception [status={}, code={}]: {}", e.getStatus().value(), e.getCode(), e.getMessage());
         ApiError body = new ApiError(
                 OffsetDateTime.now(),
-                TRACE_ID_PLACEHOLDER,
+                currentTraceId(),
                 e.getCode(),
                 e.getMessage()
         );
@@ -44,7 +50,7 @@ public class GlobalExceptionHandler {
         String code = anonymous ? "UNAUTHORIZED" : "FORBIDDEN";
         String message = anonymous ? "Authentication is required." : "You do not have permission to perform this action.";
         log.debug("Access denied [status={}]: {}", status.value(), e.getMessage());
-        ApiError body = new ApiError(OffsetDateTime.now(), TRACE_ID_PLACEHOLDER, code, message);
+        ApiError body = new ApiError(OffsetDateTime.now(), currentTraceId(), code, message);
         return ResponseEntity.status(status).body(body);
     }
 
@@ -53,7 +59,7 @@ public class GlobalExceptionHandler {
         log.error("Unhandled exception", e);
         ApiError body = new ApiError(
                 OffsetDateTime.now(),
-                TRACE_ID_PLACEHOLDER,
+                currentTraceId(),
                 "INTERNAL_SERVER_ERROR",
                 "An unexpected error occurred."
         );

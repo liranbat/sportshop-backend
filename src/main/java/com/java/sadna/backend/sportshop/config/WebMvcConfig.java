@@ -19,6 +19,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
                 .allowedOrigins(props.getCors().getAllowedOrigins().toArray(String[]::new))
                 .allowedMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
                 .allowedHeaders("*")
+                .exposedHeaders(TraceIdResponseHeaderFilter.HEADER)
                 .allowCredentials(true);
     }
 }
