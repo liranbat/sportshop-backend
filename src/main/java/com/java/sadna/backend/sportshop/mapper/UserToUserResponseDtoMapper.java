@@ -1,6 +1,6 @@
 package com.java.sadna.backend.sportshop.mapper;
 
-import com.java.sadna.backend.sportshop.api.generated.auth.model.UserResponseDto;
+import com.java.sadna.backend.sportshop.api.generated.authusers.model.UserResponseDto;
 import com.java.sadna.backend.sportshop.model.User;
 import org.springframework.stereotype.Component;
 

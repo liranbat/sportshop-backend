@@ -1,7 +1,7 @@
 package com.java.sadna.backend.sportshop.service;
 
-import com.java.sadna.backend.sportshop.api.generated.auth.model.LoginRequestDto;
-import com.java.sadna.backend.sportshop.api.generated.auth.model.RegisterRequestDto;
+import com.java.sadna.backend.sportshop.api.generated.authusers.model.LoginRequestDto;
+import com.java.sadna.backend.sportshop.api.generated.authusers.model.RegisterRequestDto;
 import com.java.sadna.backend.sportshop.config.AppProperties;
 import com.java.sadna.backend.sportshop.entity.RefreshTokenEntity;
 import com.java.sadna.backend.sportshop.entity.UserEntity;
