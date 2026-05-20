@@ -1,9 +1,9 @@
 package com.java.sadna.backend.sportshop.controller;
 
-import com.java.sadna.backend.sportshop.api.generated.auth.api.AuthApi;
-import com.java.sadna.backend.sportshop.api.generated.auth.model.LoginRequestDto;
-import com.java.sadna.backend.sportshop.api.generated.auth.model.RegisterRequestDto;
-import com.java.sadna.backend.sportshop.api.generated.auth.model.UserResponseDto;
+import com.java.sadna.backend.sportshop.api.generated.authusers.api.AuthApi;
+import com.java.sadna.backend.sportshop.api.generated.authusers.model.LoginRequestDto;
+import com.java.sadna.backend.sportshop.api.generated.authusers.model.RegisterRequestDto;
+import com.java.sadna.backend.sportshop.api.generated.authusers.model.UserResponseDto;
 import com.java.sadna.backend.sportshop.exception.UnauthorizedException;
 import com.java.sadna.backend.sportshop.mapper.UserToUserResponseDtoMapper;
 import com.java.sadna.backend.sportshop.service.AuthService;

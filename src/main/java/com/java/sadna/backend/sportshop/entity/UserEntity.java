@@ -7,7 +7,8 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
-// audit columns (updated_at/_by, deleted_at/_by) intentionally unmapped — JPA validate ignores extras
+import java.time.OffsetDateTime;
+
 @Entity
 @Table(name = "users")
 public class UserEntity {
@@ -36,6 +37,18 @@ public class UserEntity {
 
     @Column(name = "is_deleted", nullable = false)
     private boolean deleted;
+
+    @Column(name = "deleted_at")
+    private OffsetDateTime deletedAt;
+
+    @Column(name = "deleted_by")
+    private Long deletedBy;
+
+    @Column(name = "updated_at")
+    private OffsetDateTime updatedAt;
+
+    @Column(name = "updated_by")
+    private Long updatedBy;
 
     protected UserEntity() {
     }
@@ -79,5 +92,21 @@ public class UserEntity {
 
     public boolean isDeleted() {
         return deleted;
+    }
+
+    public OffsetDateTime getDeletedAt() {
+        return deletedAt;
+    }
+
+    public Long getDeletedBy() {
+        return deletedBy;
+    }
+
+    public OffsetDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public Long getUpdatedBy() {
+        return updatedBy;
     }
 }
