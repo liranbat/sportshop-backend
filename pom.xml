@@ -59,9 +59,6 @@
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-actuator</artifactId>
 		</dependency>
-
-		<!-- Micrometer Tracing (OTel bridge) — wires Tracer + MDC traceId/spanId
-		     correlation. No exporter on classpath, so spans are created and dropped. -->
 		<dependency>
 			<groupId>io.micrometer</groupId>
 			<artifactId>micrometer-tracing-bridge-otel</artifactId>
@@ -179,15 +176,15 @@
 						</configuration>
 					</execution>
 					<execution>
-						<id>generate-auth-api</id>
+						<id>generate-auth-and-users-api</id>
 						<goals>
 							<goal>generate</goal>
 						</goals>
 						<configuration>
-							<inputSpec>${openapi.specs.staged}/auth-api.yaml</inputSpec>
+							<inputSpec>${openapi.specs.staged}/auth-and-users-api.yaml</inputSpec>
 							<generatorName>spring</generatorName>
-							<apiPackage>com.java.sadna.backend.sportshop.api.generated.auth.api</apiPackage>
-							<modelPackage>com.java.sadna.backend.sportshop.api.generated.auth.model</modelPackage>
+							<apiPackage>com.java.sadna.backend.sportshop.api.generated.authusers.api</apiPackage>
+							<modelPackage>com.java.sadna.backend.sportshop.api.generated.authusers.model</modelPackage>
 							<modelNameSuffix>Dto</modelNameSuffix>
 							<generateApiTests>false</generateApiTests>
 							<generateApiDocumentation>false</generateApiDocumentation>
