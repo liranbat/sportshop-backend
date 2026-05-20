@@ -11,6 +11,5 @@ public interface RefreshTokenRepository extends JpaRepository<RefreshTokenEntity
 
     Optional<RefreshTokenEntity> findByUserId(Long userId);
 
-    // /auth/logout calls this; idempotent — returns 0 rows affected if no session exists.
     void deleteByUserId(Long userId);
 }
