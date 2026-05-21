@@ -1,6 +1,6 @@
 package com.java.sadna.backend.sportshop.model;
 
-public class User {
+public class UserDto {
 
     private final Long id;
     private final String firstName;
@@ -9,7 +9,7 @@ public class User {
     private final String phone;
     private final boolean admin;
 
-    public User(Long id, String firstName, String lastName, String email, String phone, boolean admin) {
+    public UserDto(Long id, String firstName, String lastName, String email, String phone, boolean admin) {
         this.id = id;
         this.firstName = firstName;
         this.lastName = lastName;

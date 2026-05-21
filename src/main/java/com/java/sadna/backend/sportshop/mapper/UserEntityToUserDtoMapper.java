@@ -1,14 +1,14 @@
 package com.java.sadna.backend.sportshop.mapper;
 
 import com.java.sadna.backend.sportshop.entity.UserEntity;
-import com.java.sadna.backend.sportshop.model.User;
+import com.java.sadna.backend.sportshop.model.UserDto;
 import org.springframework.stereotype.Component;
 
 @Component
-public class UserEntityToUserMapper {
+public class UserEntityToUserDtoMapper {
 
-    public User map(UserEntity userEntity) {
-        return new User(
+    public UserDto map(UserEntity userEntity) {
+        return new UserDto(
                 userEntity.getId(),
                 userEntity.getFirstName(),
                 userEntity.getLastName(),

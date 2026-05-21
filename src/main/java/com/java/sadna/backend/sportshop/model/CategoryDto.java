@@ -1,12 +1,12 @@
 package com.java.sadna.backend.sportshop.model;
 
-public class Category {
+public class CategoryDto {
 
     private final Long id;
     private final String name;
     private final String iconFilename;
 
-    public Category(Long id, String name, String iconFilename) {
+    public CategoryDto(Long id, String name, String iconFilename) {
         this.id = id;
         this.name = name;
         this.iconFilename = iconFilename;
