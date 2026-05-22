@@ -34,4 +34,9 @@ public class ImagesProperties {
     public String getCategoryIconUrl(String filename) {
         return filename == null ? null : "/" + urlPrefix + "/" + categoryPrefix + "/" + filename;
     }
+
+    // composes the product image URL (e.g. "/images/products/basketball-spalding.jpg"). null-safe.
+    public String getProductImageUrl(String filename) {
+        return filename == null ? null : "/" + urlPrefix + "/" + productPrefix + "/" + filename;
+    }
 }

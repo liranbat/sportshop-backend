@@ -1,11 +1,11 @@
 package com.java.sadna.backend.sportshop.controller;
 
 import com.java.sadna.backend.sportshop.api.generated.authusers.api.UsersApi;
-import com.java.sadna.backend.sportshop.api.generated.authusers.model.ChangePasswordRequestDto;
-import com.java.sadna.backend.sportshop.api.generated.authusers.model.UpdateProfileRequestDto;
-import com.java.sadna.backend.sportshop.api.generated.authusers.model.UserResponseDto;
+import com.java.sadna.backend.sportshop.api.generated.authusers.model.ChangePasswordRequest;
+import com.java.sadna.backend.sportshop.api.generated.authusers.model.UpdateProfileRequest;
+import com.java.sadna.backend.sportshop.api.generated.authusers.model.UserResponse;
 import com.java.sadna.backend.sportshop.exception.UnauthorizedException;
-import com.java.sadna.backend.sportshop.mapper.UserToUserResponseDtoMapper;
+import com.java.sadna.backend.sportshop.mapper.UserDtoToUserResponseMapper;
 import com.java.sadna.backend.sportshop.service.UserService;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.ResponseEntity;
@@ -20,31 +20,31 @@ import java.util.Optional;
 public class UserController implements UsersApi {
 
     private final UserService userService;
-    private final UserToUserResponseDtoMapper userToUserResponseDtoMapper;
+    private final UserDtoToUserResponseMapper userDtoToUserResponseMapper;
     private final HttpServletResponse httpServletResponse;
 
     public UserController(UserService userService,
-                          UserToUserResponseDtoMapper userToUserResponseDtoMapper,
+                          UserDtoToUserResponseMapper userDtoToUserResponseMapper,
                           HttpServletResponse httpServletResponse) {
         this.userService = userService;
-        this.userToUserResponseDtoMapper = userToUserResponseDtoMapper;
+        this.userDtoToUserResponseMapper = userDtoToUserResponseMapper;
         this.httpServletResponse = httpServletResponse;
     }
 
     @Override
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<UserResponseDto> updateProfile(UpdateProfileRequestDto updateProfileRequestDto) {
+    public ResponseEntity<UserResponse> updateProfile(UpdateProfileRequest updateProfileRequest) {
         Long userId = currentUserIdOrThrow();
         return ResponseEntity.ok(
-                userToUserResponseDtoMapper.map(userService.updateProfile(userId, updateProfileRequestDto))
+                userDtoToUserResponseMapper.map(userService.updateProfile(userId, updateProfileRequest))
         );
     }
 
     @Override
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<Void> changePassword(ChangePasswordRequestDto changePasswordRequestDto) {
+    public ResponseEntity<Void> changePassword(ChangePasswordRequest changePasswordRequest) {
         Long userId = currentUserIdOrThrow();
-        userService.changePassword(userId, changePasswordRequestDto);
+        userService.changePassword(userId, changePasswordRequest);
         return ResponseEntity.noContent().build();
     }
 

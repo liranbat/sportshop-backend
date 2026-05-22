@@ -1,12 +1,12 @@
 package com.java.sadna.backend.sportshop.service;
 
-import com.java.sadna.backend.sportshop.api.generated.authusers.model.ChangePasswordRequestDto;
-import com.java.sadna.backend.sportshop.api.generated.authusers.model.UpdateProfileRequestDto;
+import com.java.sadna.backend.sportshop.api.generated.authusers.model.ChangePasswordRequest;
+import com.java.sadna.backend.sportshop.api.generated.authusers.model.UpdateProfileRequest;
 import com.java.sadna.backend.sportshop.entity.UserEntity;
 import com.java.sadna.backend.sportshop.exception.ConflictException;
 import com.java.sadna.backend.sportshop.exception.UnauthorizedException;
-import com.java.sadna.backend.sportshop.mapper.UserEntityToUserMapper;
-import com.java.sadna.backend.sportshop.model.User;
+import com.java.sadna.backend.sportshop.mapper.UserEntityToUserDtoMapper;
+import com.java.sadna.backend.sportshop.model.UserDto;
 import com.java.sadna.backend.sportshop.repository.RefreshTokenRepository;
 import com.java.sadna.backend.sportshop.repository.UserRepository;
 import jakarta.servlet.http.HttpServletResponse;
@@ -29,22 +29,22 @@ public class UserService {
     private final RefreshTokenRepository refreshTokenRepository;
     private final PasswordEncoder passwordEncoder;
     private final CookieService cookieService;
-    private final UserEntityToUserMapper userEntityToUserMapper;
+    private final UserEntityToUserDtoMapper userEntityToUserDtoMapper;
 
     public UserService(UserRepository userRepository,
                        RefreshTokenRepository refreshTokenRepository,
                        PasswordEncoder passwordEncoder,
                        CookieService cookieService,
-                       UserEntityToUserMapper userEntityToUserMapper) {
+                       UserEntityToUserDtoMapper userEntityToUserDtoMapper) {
         this.userRepository = userRepository;
         this.refreshTokenRepository = refreshTokenRepository;
         this.passwordEncoder = passwordEncoder;
         this.cookieService = cookieService;
-        this.userEntityToUserMapper = userEntityToUserMapper;
+        this.userEntityToUserDtoMapper = userEntityToUserDtoMapper;
     }
 
     @Transactional
-    public User updateProfile(Long userId, UpdateProfileRequestDto dto) {
+    public UserDto updateProfile(Long userId, UpdateProfileRequest dto) {
         int updated = userRepository.applyProfileEdit(
                 userId,
                 dto.getFirstName(),
@@ -59,11 +59,11 @@ public class UserService {
         }
 
         UserEntity fresh = loadActiveOrThrow(userId);
-        return userEntityToUserMapper.map(fresh);
+        return userEntityToUserDtoMapper.map(fresh);
     }
 
     @Transactional
-    public void changePassword(Long userId, ChangePasswordRequestDto dto) {
+    public void changePassword(Long userId, ChangePasswordRequest dto) {
         UserEntity entity = loadActiveOrThrow(userId);
         if (!passwordEncoder.matches(dto.getCurrentPassword(), entity.getPasswordHash())) {
             throw new UnauthorizedException(CURRENT_PASSWORD_INCORRECT_MESSAGE);

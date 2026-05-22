@@ -1,11 +1,11 @@
 package com.java.sadna.backend.sportshop.controller;
 
 import com.java.sadna.backend.sportshop.api.generated.authusers.api.AuthApi;
-import com.java.sadna.backend.sportshop.api.generated.authusers.model.LoginRequestDto;
-import com.java.sadna.backend.sportshop.api.generated.authusers.model.RegisterRequestDto;
-import com.java.sadna.backend.sportshop.api.generated.authusers.model.UserResponseDto;
+import com.java.sadna.backend.sportshop.api.generated.authusers.model.LoginRequest;
+import com.java.sadna.backend.sportshop.api.generated.authusers.model.RegisterRequest;
+import com.java.sadna.backend.sportshop.api.generated.authusers.model.UserResponse;
 import com.java.sadna.backend.sportshop.exception.UnauthorizedException;
-import com.java.sadna.backend.sportshop.mapper.UserToUserResponseDtoMapper;
+import com.java.sadna.backend.sportshop.mapper.UserDtoToUserResponseMapper;
 import com.java.sadna.backend.sportshop.service.AuthService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -22,7 +22,7 @@ import java.util.Optional;
 public class AuthController implements AuthApi {
 
     private final AuthService authService;
-    private final UserToUserResponseDtoMapper userToUserResponseDtoMapper;
+    private final UserDtoToUserResponseMapper userDtoToUserResponseMapper;
     
     // Spring injects request-scoped proxies, so even though this controller is a singleton,
     // each call reads/writes the cookies of its own HTTP request.
@@ -30,25 +30,25 @@ public class AuthController implements AuthApi {
     private final HttpServletResponse httpServletResponse;
 
     public AuthController(AuthService authService,
-                          UserToUserResponseDtoMapper userToUserResponseDtoMapper,
+                          UserDtoToUserResponseMapper userDtoToUserResponseMapper,
                           HttpServletRequest httpServletRequest,
                           HttpServletResponse httpServletResponse) {
         this.authService = authService;
-        this.userToUserResponseDtoMapper = userToUserResponseDtoMapper;
+        this.userDtoToUserResponseMapper = userDtoToUserResponseMapper;
         this.httpServletRequest = httpServletRequest;
         this.httpServletResponse = httpServletResponse;
     }
 
     @Override
-    public ResponseEntity<UserResponseDto> register(RegisterRequestDto registerRequestDto) {
+    public ResponseEntity<UserResponse> register(RegisterRequest registerRequest) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(userToUserResponseDtoMapper.map(authService.register(registerRequestDto)));
+                .body(userDtoToUserResponseMapper.map(authService.register(registerRequest)));
     }
 
     @Override
-    public ResponseEntity<UserResponseDto> login(LoginRequestDto loginRequestDto) {
+    public ResponseEntity<UserResponse> login(LoginRequest loginRequest) {
         return ResponseEntity.ok(
-                userToUserResponseDtoMapper.map(authService.login(loginRequestDto, httpServletResponse))
+                userDtoToUserResponseMapper.map(authService.login(loginRequest, httpServletResponse))
         );
     }
 
@@ -63,20 +63,20 @@ public class AuthController implements AuthApi {
     // Open by design: refresh runs without a valid access token; the refresh_token
     // cookie itself is verified inside AuthService.
     @Override
-    public ResponseEntity<UserResponseDto> refresh() {
+    public ResponseEntity<UserResponse> refresh() {
         return ResponseEntity.ok(
-                userToUserResponseDtoMapper.map(authService.refresh(httpServletRequest, httpServletResponse))
+                userDtoToUserResponseMapper.map(authService.refresh(httpServletRequest, httpServletResponse))
         );
     }
 
     @Override
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<UserResponseDto> getMe() {
+    public ResponseEntity<UserResponse> getMe() {
         // @PreAuthorize already guaranteed an authenticated principal; the orElseThrow
         // only fires if something other than JwtCookieAuthenticationFilter populated the
         // SecurityContext with a non-Long principal.
         Long userId = currentUserId().orElseThrow(UnauthorizedException::new);
-        return ResponseEntity.ok(userToUserResponseDtoMapper.map(authService.getMe(userId)));
+        return ResponseEntity.ok(userDtoToUserResponseMapper.map(authService.getMe(userId)));
     }
 
     private Optional<Long> currentUserId() {
