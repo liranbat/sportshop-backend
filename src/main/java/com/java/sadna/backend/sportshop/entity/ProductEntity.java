@@ -2,9 +2,12 @@ package com.java.sadna.backend.sportshop.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.Version;
 
@@ -27,6 +30,15 @@ public class ProductEntity {
 
     @Column(name = "category_id", nullable = false)
     private Long categoryId;
+
+    // Read-only association mapped solely so JPA queries can ORDER BY p.category.name.
+    // Do NOT add a getter or navigate via Java — the scalar categoryId above stays the single
+    // source of truth for the FK; insertable/updatable=false keeps Hibernate from treating
+    // this as a second writer to the category_id column.
+    @SuppressWarnings("unused")
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "category_id", insertable = false, updatable = false)
+    private CategoryEntity category;
 
     @Column(name = "is_multi_size", nullable = false)
     private boolean multiSize;

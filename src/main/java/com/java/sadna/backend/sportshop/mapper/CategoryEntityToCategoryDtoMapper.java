@@ -5,8 +5,9 @@ import com.java.sadna.backend.sportshop.model.CategoryDto;
 import org.springframework.stereotype.Component;
 
 @Component
-public class CategoryEntityToCategoryDtoMapper {
+public class CategoryEntityToCategoryDtoMapper implements BaseMapper<CategoryEntity, CategoryDto> {
 
+    @Override
     public CategoryDto map(CategoryEntity categoryEntity) {
         return new CategoryDto(
                 categoryEntity.getId(),

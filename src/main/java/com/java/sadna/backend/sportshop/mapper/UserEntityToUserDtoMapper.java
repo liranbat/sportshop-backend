@@ -5,8 +5,9 @@ import com.java.sadna.backend.sportshop.model.UserDto;
 import org.springframework.stereotype.Component;
 
 @Component
-public class UserEntityToUserDtoMapper {
+public class UserEntityToUserDtoMapper implements BaseMapper<UserEntity, UserDto> {
 
+    @Override
     public UserDto map(UserEntity userEntity) {
         return new UserDto(
                 userEntity.getId(),

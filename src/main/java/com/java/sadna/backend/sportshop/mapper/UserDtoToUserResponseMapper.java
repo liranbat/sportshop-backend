@@ -5,8 +5,9 @@ import com.java.sadna.backend.sportshop.model.UserDto;
 import org.springframework.stereotype.Component;
 
 @Component
-public class UserDtoToUserResponseMapper {
+public class UserDtoToUserResponseMapper implements BaseMapper<UserDto, UserResponse> {
 
+    @Override
     public UserResponse map(UserDto user) {
         return new UserResponse(
                 user.getId(),

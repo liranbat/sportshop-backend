@@ -7,7 +7,7 @@ import com.java.sadna.backend.sportshop.model.CategoryDto;
 import org.springframework.stereotype.Component;
 
 @Component
-public class CategoryDtoToCategoryMapper {
+public class CategoryDtoToCategoryMapper implements BaseMapper<CategoryDto, Category> {
 
     private final ImagesProperties imagesProperties;
 
@@ -15,6 +15,7 @@ public class CategoryDtoToCategoryMapper {
         this.imagesProperties = appProperties.getImages();
     }
 
+    @Override
     public Category map(CategoryDto category) {
         return new Category(
                 category.getId(),

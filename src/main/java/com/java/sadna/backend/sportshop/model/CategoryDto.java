@@ -1,6 +1,6 @@
 package com.java.sadna.backend.sportshop.model;
 
-public class CategoryDto {
+public class CategoryDto implements BaseDto {
 
     private final Long id;
     private final String name;

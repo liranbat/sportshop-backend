@@ -7,7 +7,7 @@ import com.java.sadna.backend.sportshop.model.ProductDto;
 import org.springframework.stereotype.Component;
 
 @Component
-public class ProductDtoToProductMapper {
+public class ProductDtoToProductMapper implements BaseMapper<ProductDto, Product> {
 
     private final ImagesProperties imagesProperties;
 
@@ -15,6 +15,7 @@ public class ProductDtoToProductMapper {
         this.imagesProperties = appProperties.getImages();
     }
 
+    @Override
     public Product map(ProductDto product) {
         Product apiProduct = new Product(
                 product.getId(),
