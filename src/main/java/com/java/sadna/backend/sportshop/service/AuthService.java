@@ -1,14 +1,14 @@
 package com.java.sadna.backend.sportshop.service;
 
-import com.java.sadna.backend.sportshop.api.generated.authusers.model.LoginRequestDto;
-import com.java.sadna.backend.sportshop.api.generated.authusers.model.RegisterRequestDto;
+import com.java.sadna.backend.sportshop.api.generated.authusers.model.LoginRequest;
+import com.java.sadna.backend.sportshop.api.generated.authusers.model.RegisterRequest;
 import com.java.sadna.backend.sportshop.config.AppProperties;
 import com.java.sadna.backend.sportshop.entity.RefreshTokenEntity;
 import com.java.sadna.backend.sportshop.entity.UserEntity;
 import com.java.sadna.backend.sportshop.exception.ConflictException;
 import com.java.sadna.backend.sportshop.exception.UnauthorizedException;
-import com.java.sadna.backend.sportshop.mapper.UserEntityToUserMapper;
-import com.java.sadna.backend.sportshop.model.User;
+import com.java.sadna.backend.sportshop.mapper.UserEntityToUserDtoMapper;
+import com.java.sadna.backend.sportshop.model.UserDto;
 import com.java.sadna.backend.sportshop.repository.RefreshTokenRepository;
 import com.java.sadna.backend.sportshop.repository.UserRepository;
 import jakarta.servlet.http.HttpServletRequest;
@@ -41,7 +41,7 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final CookieService cookieService;
-    private final UserEntityToUserMapper userEntityToUserMapper;
+    private final UserEntityToUserDtoMapper userEntityToUserDtoMapper;
     private final Duration refreshTokenTtl;
 
     public AuthService(UserRepository userRepository,
@@ -49,19 +49,19 @@ public class AuthService {
                        PasswordEncoder passwordEncoder,
                        JwtService jwtService,
                        CookieService cookieService,
-                       UserEntityToUserMapper userEntityToUserMapper,
+                       UserEntityToUserDtoMapper userEntityToUserDtoMapper,
                        AppProperties appProperties) {
         this.userRepository = userRepository;
         this.refreshTokenRepository = refreshTokenRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
         this.cookieService = cookieService;
-        this.userEntityToUserMapper = userEntityToUserMapper;
+        this.userEntityToUserDtoMapper = userEntityToUserDtoMapper;
         this.refreshTokenTtl = appProperties.getAuth().getRefreshTokenTtl();
     }
 
     @Transactional
-    public User register(RegisterRequestDto dto) {
+    public UserDto register(RegisterRequest dto) {
         String email = normalizeEmail(dto.getEmail());
         if (userRepository.existsByEmail(email)) {
             throw new ConflictException(EMAIL_TAKEN_MESSAGE);
@@ -75,18 +75,18 @@ public class AuthService {
                 false
         );
         UserEntity saved = userRepository.save(entity);
-        return userEntityToUserMapper.map(saved);
+        return userEntityToUserDtoMapper.map(saved);
     }
 
     @Transactional
-    public User login(LoginRequestDto dto, HttpServletResponse response) {
+    public UserDto login(LoginRequest dto, HttpServletResponse response) {
         UserEntity entity = userRepository.findByEmailAndDeletedFalse(normalizeEmail(dto.getEmail()))
                 .orElseThrow(() -> new UnauthorizedException(INVALID_CREDENTIALS_MESSAGE));
         if (!passwordEncoder.matches(dto.getPassword(), entity.getPasswordHash())) {
             throw new UnauthorizedException(INVALID_CREDENTIALS_MESSAGE);
         }
         issueSession(entity, response);
-        return userEntityToUserMapper.map(entity);
+        return userEntityToUserDtoMapper.map(entity);
     }
 
     @Transactional
@@ -98,7 +98,7 @@ public class AuthService {
     }
 
     @Transactional
-    public User refresh(HttpServletRequest request, HttpServletResponse response) {
+    public UserDto refresh(HttpServletRequest request, HttpServletResponse response) {
         // Missing / unknown / expired all surface the same message so an attacker
         // probing /auth/refresh cannot tell whether a cookie was even present.
         String refreshTokenValue = cookieService.readRefreshCookie(request)
@@ -122,14 +122,14 @@ public class AuthService {
 
         String accessToken = jwtService.issueAccessToken(user.getId(), user.isAdmin());
         attachSessionCookies(response, accessToken, newRefreshToken);
-        return userEntityToUserMapper.map(user);
+        return userEntityToUserDtoMapper.map(user);
     }
 
     @Transactional(readOnly = true)
-    public User getMe(Long userId) {
+    public UserDto getMe(Long userId) {
         UserEntity entity = userRepository.findByIdAndDeletedFalse(userId)
                 .orElseThrow(() -> new UnauthorizedException("Session is no longer valid."));
-        return userEntityToUserMapper.map(entity);
+        return userEntityToUserDtoMapper.map(entity);
     }
 
     private void issueSession(UserEntity entity, HttpServletResponse response) {

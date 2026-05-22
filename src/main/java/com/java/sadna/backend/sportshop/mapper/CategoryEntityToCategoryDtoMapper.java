@@ -1,14 +1,15 @@
 package com.java.sadna.backend.sportshop.mapper;
 
 import com.java.sadna.backend.sportshop.entity.CategoryEntity;
-import com.java.sadna.backend.sportshop.model.Category;
+import com.java.sadna.backend.sportshop.model.CategoryDto;
 import org.springframework.stereotype.Component;
 
 @Component
-public class CategoryEntityToCategoryMapper {
+public class CategoryEntityToCategoryDtoMapper implements BaseMapper<CategoryEntity, CategoryDto> {
 
-    public Category map(CategoryEntity categoryEntity) {
-        return new Category(
+    @Override
+    public CategoryDto map(CategoryEntity categoryEntity) {
+        return new CategoryDto(
                 categoryEntity.getId(),
                 categoryEntity.getName(),
                 categoryEntity.getIconFilename()
