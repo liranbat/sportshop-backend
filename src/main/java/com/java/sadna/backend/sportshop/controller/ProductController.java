@@ -1,9 +1,12 @@
 package com.java.sadna.backend.sportshop.controller;
 
 import com.java.sadna.backend.sportshop.api.generated.products.api.ProductsApi;
+import com.java.sadna.backend.sportshop.api.generated.products.model.ProductDetail;
 import com.java.sadna.backend.sportshop.api.generated.products.model.ProductPage;
 import com.java.sadna.backend.sportshop.mapper.PagedProductDtoToProductPageMapper;
+import com.java.sadna.backend.sportshop.mapper.ProductDetailDtoToProductDetailMapper;
 import com.java.sadna.backend.sportshop.model.PagedResult;
+import com.java.sadna.backend.sportshop.model.ProductDetailDto;
 import com.java.sadna.backend.sportshop.model.ProductDto;
 import com.java.sadna.backend.sportshop.service.ProductService;
 import org.springframework.http.ResponseEntity;
@@ -17,11 +20,14 @@ public class ProductController implements ProductsApi {
 
     private final ProductService productService;
     private final PagedProductDtoToProductPageMapper pagedProductDtoToProductPageMapper;
+    private final ProductDetailDtoToProductDetailMapper productDetailDtoToProductDetailMapper;
 
     public ProductController(ProductService productService,
-                             PagedProductDtoToProductPageMapper pagedProductDtoToProductPageMapper) {
+                             PagedProductDtoToProductPageMapper pagedProductDtoToProductPageMapper,
+                             ProductDetailDtoToProductDetailMapper productDetailDtoToProductDetailMapper) {
         this.productService = productService;
         this.pagedProductDtoToProductPageMapper = pagedProductDtoToProductPageMapper;
+        this.productDetailDtoToProductDetailMapper = productDetailDtoToProductDetailMapper;
     }
 
     @Override
@@ -39,5 +45,11 @@ public class ProductController implements ProductsApi {
                 sortField, sortDirection, page, pageSize
         );
         return ResponseEntity.ok(pagedProductDtoToProductPageMapper.map(result));
+    }
+
+    @Override
+    public ResponseEntity<ProductDetail> getProduct(Long id) {
+        ProductDetailDto detail = productService.getById(id);
+        return ResponseEntity.ok(productDetailDtoToProductDetailMapper.map(detail));
     }
 }

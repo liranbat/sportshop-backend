@@ -17,16 +17,14 @@ public class ProductDtoToProductMapper implements BaseMapper<ProductDto, Product
 
     @Override
     public Product map(ProductDto product) {
-        Product apiProduct = new Product(
-                product.getId(),
-                product.getName(),
-                product.getCategoryId(),
-                product.isMultiSize(),
-                product.getPrice(),
-                product.getVersion()
-        );
-        apiProduct.setDescription(product.getDescription());
-        apiProduct.setImageUrl(imagesProperties.getProductImageUrl(product.getImageFilename()));
-        return apiProduct;
+        return new Product()
+                .id(product.getId())
+                .name(product.getName())
+                .description(product.getDescription())
+                .categoryId(product.getCategoryId())
+                .isMultiSize(product.isMultiSize())
+                .imageUrl(imagesProperties.getProductImageUrl(product.getImageFilename()))
+                .price(product.getPrice())
+                .version(product.getVersion());
     }
 }
