@@ -1,10 +1,17 @@
 package com.java.sadna.backend.sportshop.service;
 
+import com.java.sadna.backend.sportshop.entity.CategoryEntity;
 import com.java.sadna.backend.sportshop.entity.ProductEntity;
+import com.java.sadna.backend.sportshop.exception.NotFoundException;
 import com.java.sadna.backend.sportshop.mapper.ProductEntityToProductDtoMapper;
+import com.java.sadna.backend.sportshop.mapper.ProductStockEntityToProductSizeDtoMapper;
 import com.java.sadna.backend.sportshop.model.PagedResult;
+import com.java.sadna.backend.sportshop.model.ProductDetailDto;
 import com.java.sadna.backend.sportshop.model.ProductDto;
+import com.java.sadna.backend.sportshop.model.ProductSizeDto;
+import com.java.sadna.backend.sportshop.repository.CategoryRepository;
 import com.java.sadna.backend.sportshop.repository.ProductRepository;
+import com.java.sadna.backend.sportshop.repository.ProductStockRepository;
 import com.java.sadna.backend.sportshop.repository.specification.ProductSpecifications;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
@@ -28,14 +35,23 @@ public class ProductService {
     private static final int DEFAULT_PAGE_SIZE = 9;
 
     private final ProductRepository productRepository;
+    private final CategoryRepository categoryRepository;
+    private final ProductStockRepository productStockRepository;
     private final ProductEntityToProductDtoMapper productEntityToProductDtoMapper;
+    private final ProductStockEntityToProductSizeDtoMapper productStockEntityToProductSizeDtoMapper;
     private final PaginationService paginationService;
 
     public ProductService(ProductRepository productRepository,
+                          CategoryRepository categoryRepository,
+                          ProductStockRepository productStockRepository,
                           ProductEntityToProductDtoMapper productEntityToProductDtoMapper,
+                          ProductStockEntityToProductSizeDtoMapper productStockEntityToProductSizeDtoMapper,
                           PaginationService paginationService) {
         this.productRepository = productRepository;
+        this.categoryRepository = categoryRepository;
+        this.productStockRepository = productStockRepository;
         this.productEntityToProductDtoMapper = productEntityToProductDtoMapper;
+        this.productStockEntityToProductSizeDtoMapper = productStockEntityToProductSizeDtoMapper;
         this.paginationService = paginationService;
     }
 
@@ -62,6 +78,28 @@ public class ProductService {
                 productRepository, spec, sort, page, pageSize, DEFAULT_PAGE_SIZE,
                 productEntityToProductDtoMapper
         );
+    }
+
+    @Transactional(readOnly = true)
+    public ProductDetailDto getById(Long id) {
+        // Archived products are hidden from the Product Details page — same surface as
+        // a missing row, so we collapse both to a single 404 via NotFoundException.
+        ProductEntity productEntity = productRepository.findById(id)
+                .filter(p -> !p.isArchived())
+                .orElseThrow(() -> new NotFoundException("Product " + id + " not found."));
+
+        String categoryName = categoryRepository.findById(productEntity.getCategoryId())
+                .map(CategoryEntity::getName)
+                .orElse(null);
+
+        List<ProductSizeDto> sizes = productStockRepository
+                .findByProductId(id)
+                .stream()
+                .map(productStockEntityToProductSizeDtoMapper::map)
+                .toList();
+
+        ProductDto product = productEntityToProductDtoMapper.map(productEntity);
+        return new ProductDetailDto(product, categoryName, sizes);
     }
 
     private Sort buildSort(String sortField, String sortDirection) {
