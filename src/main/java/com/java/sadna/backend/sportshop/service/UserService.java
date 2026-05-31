@@ -7,6 +7,7 @@ import com.java.sadna.backend.sportshop.exception.ConflictException;
 import com.java.sadna.backend.sportshop.exception.UnauthorizedException;
 import com.java.sadna.backend.sportshop.mapper.UserEntityToUserDtoMapper;
 import com.java.sadna.backend.sportshop.model.UserDto;
+import com.java.sadna.backend.sportshop.repository.CartItemRepository;
 import com.java.sadna.backend.sportshop.repository.RefreshTokenRepository;
 import com.java.sadna.backend.sportshop.repository.UserRepository;
 import jakarta.servlet.http.HttpServletResponse;
@@ -27,17 +28,20 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final RefreshTokenRepository refreshTokenRepository;
+    private final CartItemRepository cartItemRepository;
     private final PasswordEncoder passwordEncoder;
     private final CookieService cookieService;
     private final UserEntityToUserDtoMapper userEntityToUserDtoMapper;
 
     public UserService(UserRepository userRepository,
                        RefreshTokenRepository refreshTokenRepository,
+                       CartItemRepository cartItemRepository,
                        PasswordEncoder passwordEncoder,
                        CookieService cookieService,
                        UserEntityToUserDtoMapper userEntityToUserDtoMapper) {
         this.userRepository = userRepository;
         this.refreshTokenRepository = refreshTokenRepository;
+        this.cartItemRepository = cartItemRepository;
         this.passwordEncoder = passwordEncoder;
         this.cookieService = cookieService;
         this.userEntityToUserDtoMapper = userEntityToUserDtoMapper;
@@ -53,7 +57,7 @@ public class UserService {
                 userId,
                 OffsetDateTime.now()
         );
-        
+
         if (updated == 0) {
             throw new UnauthorizedException(USER_NOT_ACTIVE_MESSAGE);
         }
@@ -88,7 +92,7 @@ public class UserService {
         if (!passwordEncoder.matches(currentPassword, entity.getPasswordHash())) {
             throw new UnauthorizedException(CURRENT_PASSWORD_INCORRECT_MESSAGE);
         }
-        
+
         int deleted = userRepository.softDelete(
                 userId,
                 entity.getPasswordHash(),
@@ -101,9 +105,14 @@ public class UserService {
         // Order matters: drop refresh tokens first so any in-flight refresh on this
         // user 401s immediately; the row stays soft-deleted but the session is gone.
         refreshTokenRepository.deleteByUserId(userId);
-        // TODO: when the cart slice lands, hard-delete this user's cart_items here
-        // inside the same @Transactional boundary (project-summary §3.10).
         attachClearedCookies(response);
+    }
+
+    // Post-deletion cleanup. Caller fires this off the request thread; only call after
+    // deleteAccount commits.
+    @Transactional
+    public void cleanupDeletedUser(Long userId) {
+        cartItemRepository.deleteByUserId(userId);
     }
 
     private UserEntity loadActiveOrThrow(Long userId) {

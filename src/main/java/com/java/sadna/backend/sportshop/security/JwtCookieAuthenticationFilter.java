@@ -1,5 +1,6 @@
 package com.java.sadna.backend.sportshop.security;
 
+import com.java.sadna.backend.sportshop.repository.UserRepository;
 import com.java.sadna.backend.sportshop.service.CookieService;
 import com.java.sadna.backend.sportshop.service.JwtService;
 import jakarta.servlet.FilterChain;
@@ -18,11 +19,17 @@ import java.util.List;
 import java.util.Optional;
 
 // Reads the access_token cookie on every request, parses it via JwtService,
-// and -- if valid -- populates SecurityContext with a UsernamePasswordAuthenticationToken
-// whose principal is the Long userId and whose single authority reflects the
-// isAdmin claim (ROLE_ADMIN vs ROLE_USER). Anything invalid / expired / missing
-// leaves the context untouched, which means SecurityConfig's authorize rules
-// then decide whether the request is allowed (permitAll lanes) or 401'd.
+// and -- if valid AND the user is still active (not soft-deleted) -- populates
+// SecurityContext with a UsernamePasswordAuthenticationToken whose principal is the
+// Long userId and whose single authority reflects the isAdmin claim (ROLE_ADMIN vs
+// ROLE_USER). Anything invalid / expired / missing / soft-deleted leaves the context
+// untouched, which means SecurityConfig's authorize rules then decide whether the
+// request is allowed (permitAll lanes) or 401'd.
+//
+// The soft-deleted check closes the ~15-min "valid JWT, user soft-deleted" window:
+// without it, an admin-deleted (or self-deleted) user could keep authenticating with
+// their cached access JWT until exp. One PK lookup on users(id) per authed request --
+// the table is small and the row is hot in the buffer cache.
 //
 // NOT a @Component: instantiated by SecurityConfig.securityFilterChain so it
 // only runs inside the Spring Security chain. If it were a bean, Spring Boot
@@ -33,9 +40,11 @@ public class JwtCookieAuthenticationFilter extends OncePerRequestFilter {
     public static final String AUTHORITY_USER = "ROLE_USER";
 
     private final JwtService jwtService;
+    private final UserRepository userRepository;
 
-    public JwtCookieAuthenticationFilter(JwtService jwtService) {
+    public JwtCookieAuthenticationFilter(JwtService jwtService, UserRepository userRepository) {
         this.jwtService = jwtService;
+        this.userRepository = userRepository;
     }
 
     @Override
@@ -44,9 +53,14 @@ public class JwtCookieAuthenticationFilter extends OncePerRequestFilter {
         if (SecurityContextHolder.getContext().getAuthentication() == null) {
             readAccessCookie(request)
                     .flatMap(jwtService::parseAccessToken)
+                    .filter(this::userStillActive)
                     .ifPresent(this::populateSecurityContext);
         }
         chain.doFilter(request, response);
+    }
+
+    private boolean userStillActive(AccessTokenClaims claims) {
+        return userRepository.findByIdAndDeletedFalse(claims.getUserId()).isPresent();
     }
 
     private Optional<String> readAccessCookie(HttpServletRequest request) {
