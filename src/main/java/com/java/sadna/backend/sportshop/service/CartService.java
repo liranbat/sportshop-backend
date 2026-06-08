@@ -1,6 +1,7 @@
 package com.java.sadna.backend.sportshop.service;
 
 import com.java.sadna.backend.sportshop.entity.ProductStockEntity;
+import com.java.sadna.backend.sportshop.entity.id.CartItemId;
 import com.java.sadna.backend.sportshop.entity.id.ProductStockId;
 import com.java.sadna.backend.sportshop.exception.BadRequestException;
 import com.java.sadna.backend.sportshop.exception.ConflictException;
@@ -83,12 +84,15 @@ public class CartService {
                 .findById(new ProductStockId(productId, size))
                 .orElseThrow(() -> new NotFoundException(MSG_SIZE_NOT_AVAILABLE));
 
-        if (stock.getQuantity() < requestedQuantity) {
+        int existingQuantity = cartItemRepository
+                .findById(new CartItemId(userId, productId, size))
+                .map(ci -> ci.getQuantity())
+                .orElse(0);
+
+        if (stock.getQuantity() < existingQuantity + requestedQuantity) {
             throw new ConflictException(MSG_INSUFFICIENT_STOCK_ADD);
         }
 
-        // Race-safe gate. 0 rows = stock dropped, existing cart line pushes past cap, or
-        // product/size flipped between pre-validations and the write. All-or-nothing.
         int affected = cartItemRepository.upsertIfStockAllows(userId, productId, size, requestedQuantity);
         if (affected == 0) {
             throw new ConflictException(MSG_CART_ADD_FAILED);

@@ -28,9 +28,9 @@ public interface CartItemRepository extends JpaRepository<CartItemEntity, CartIt
             SELECT :userId, :productId, :size, :requestedQty, p.version
               FROM products p
               JOIN product_stock ps ON ps.product_id = p.id AND ps.size = :size
-             WHERE p.id        = :productId
-               AND p.archived  = false
-               AND ps.quantity >= :requestedQty
+             WHERE p.id          = :productId
+               AND p.is_archived = false
+               AND ps.quantity  >= :requestedQty
             ON CONFLICT (user_id, product_id, size) DO UPDATE
                SET quantity        = cart_items.quantity + EXCLUDED.quantity,
                    product_version = EXCLUDED.product_version
