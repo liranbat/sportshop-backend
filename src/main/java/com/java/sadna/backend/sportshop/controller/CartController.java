@@ -42,6 +42,13 @@ public class CartController implements CartApi {
 
     @Override
     @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<CartView> getCart() {
+        Long userId = SecurityContextUtils.currentUserIdOrThrow();
+        return ResponseEntity.ok(cartViewDtoToCartViewMapper.map(cartService.read(userId)));
+    }
+
+    @Override
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<CartView> syncCart() {
         Long userId = SecurityContextUtils.currentUserIdOrThrow();
         return ResponseEntity.ok(cartViewDtoToCartViewMapper.map(cartService.sync(userId)));

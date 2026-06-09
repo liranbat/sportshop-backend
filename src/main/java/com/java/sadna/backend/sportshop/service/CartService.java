@@ -61,6 +61,11 @@ public class CartService {
         return new CartCountDto((int) cartItemRepository.countByUserId(userId));
     }
 
+    @Transactional(readOnly = true)
+    public CartViewDto read(Long userId) {
+        return composeCartView(cartItemRepository.findCartViewRowsByUserId(userId));
+    }
+
     @Transactional
     public CartViewDto sync(Long userId) {
         cartItemRepository.bulkSyncVersionsByUserId(userId);
