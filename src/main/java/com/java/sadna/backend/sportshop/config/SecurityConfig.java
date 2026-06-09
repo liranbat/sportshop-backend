@@ -1,5 +1,6 @@
 package com.java.sadna.backend.sportshop.config;
 
+import com.java.sadna.backend.sportshop.repository.UserRepository;
 import com.java.sadna.backend.sportshop.security.JwtCookieAuthenticationFilter;
 import com.java.sadna.backend.sportshop.service.JwtService;
 import org.springframework.context.annotation.Bean;
@@ -29,8 +30,10 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfig {
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtService jwtService) throws Exception {
-        JwtCookieAuthenticationFilter jwtCookieFilter = new JwtCookieAuthenticationFilter(jwtService);
+    public SecurityFilterChain securityFilterChain(HttpSecurity http,
+                                                   JwtService jwtService,
+                                                   UserRepository userRepository) throws Exception {
+        JwtCookieAuthenticationFilter jwtCookieFilter = new JwtCookieAuthenticationFilter(jwtService, userRepository);
 
         http
                 .csrf(AbstractHttpConfigurer::disable)

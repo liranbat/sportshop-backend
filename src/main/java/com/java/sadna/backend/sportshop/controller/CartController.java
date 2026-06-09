@@ -1,25 +1,95 @@
 package com.java.sadna.backend.sportshop.controller;
 
+import com.java.sadna.backend.sportshop.api.generated.cart.api.CartApi;
+import com.java.sadna.backend.sportshop.api.generated.cart.model.AddCartItemRequest;
+import com.java.sadna.backend.sportshop.api.generated.cart.model.CartCount;
+import com.java.sadna.backend.sportshop.api.generated.cart.model.CartValidationResult;
+import com.java.sadna.backend.sportshop.api.generated.cart.model.CartView;
+import com.java.sadna.backend.sportshop.api.generated.cart.model.UpdateCartItemRequest;
+import com.java.sadna.backend.sportshop.mapper.CartCountDtoToCartCountMapper;
+import com.java.sadna.backend.sportshop.mapper.CartValidationResultDtoToCartValidationResultMapper;
+import com.java.sadna.backend.sportshop.mapper.CartViewDtoToCartViewMapper;
+import com.java.sadna.backend.sportshop.security.SecurityContextUtils;
+import com.java.sadna.backend.sportshop.service.CartService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
-import java.util.Map;
-
-// QA-only stub: gives the /cart frontend route a real authenticated backend call
-// so the 401 -> refresh -> retry interceptor flow can be exercised end-to-end.
-// Will be replaced by the real cart API (with its own OpenAPI spec, DTOs, service,
-// persistence) when the cart feature ships.
 @RestController
-@RequestMapping("/api/cart")
-public class CartController {
+public class CartController implements CartApi {
 
-    @GetMapping
+    private final CartService cartService;
+    private final CartCountDtoToCartCountMapper cartCountDtoToCartCountMapper;
+    private final CartViewDtoToCartViewMapper cartViewDtoToCartViewMapper;
+    private final CartValidationResultDtoToCartValidationResultMapper cartValidationResultDtoToCartValidationResultMapper;
+
+    public CartController(CartService cartService,
+                          CartCountDtoToCartCountMapper cartCountDtoToCartCountMapper,
+                          CartViewDtoToCartViewMapper cartViewDtoToCartViewMapper,
+                          CartValidationResultDtoToCartValidationResultMapper cartValidationResultDtoToCartValidationResultMapper) {
+        this.cartService = cartService;
+        this.cartCountDtoToCartCountMapper = cartCountDtoToCartCountMapper;
+        this.cartViewDtoToCartViewMapper = cartViewDtoToCartViewMapper;
+        this.cartValidationResultDtoToCartValidationResultMapper = cartValidationResultDtoToCartValidationResultMapper;
+    }
+
+    @Override
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<Map<String, Object>> getCart() {
-        return ResponseEntity.ok(Map.of("items", List.of()));
+    public ResponseEntity<CartCount> getCartCount() {
+        Long userId = SecurityContextUtils.currentUserIdOrThrow();
+        return ResponseEntity.ok(cartCountDtoToCartCountMapper.map(cartService.getCount(userId)));
+    }
+
+    @Override
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<CartView> getCart() {
+        Long userId = SecurityContextUtils.currentUserIdOrThrow();
+        return ResponseEntity.ok(cartViewDtoToCartViewMapper.map(cartService.read(userId)));
+    }
+
+    @Override
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<CartView> syncCart() {
+        Long userId = SecurityContextUtils.currentUserIdOrThrow();
+        return ResponseEntity.ok(cartViewDtoToCartViewMapper.map(cartService.sync(userId)));
+    }
+
+    @Override
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<CartValidationResult> validateCart() {
+        Long userId = SecurityContextUtils.currentUserIdOrThrow();
+        return ResponseEntity.ok(
+                cartValidationResultDtoToCartValidationResultMapper.map(cartService.validateForCheckout(userId))
+        );
+    }
+
+    @Override
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<Void> addCartItem(AddCartItemRequest addCartItemRequest) {
+        Long userId = SecurityContextUtils.currentUserIdOrThrow();
+        cartService.addItem(
+                userId,
+                addCartItemRequest.getProductId(),
+                addCartItemRequest.getSize(),
+                addCartItemRequest.getQuantity()
+        );
+        return ResponseEntity.noContent().build();
+    }
+
+    @Override
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<Void> updateCartItem(Long productId, String size,
+                                               UpdateCartItemRequest updateCartItemRequest) {
+        Long userId = SecurityContextUtils.currentUserIdOrThrow();
+        cartService.updateQuantity(userId, productId, size, updateCartItemRequest.getQuantity());
+        return ResponseEntity.noContent().build();
+    }
+
+    @Override
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<Void> removeCartItem(Long productId, String size) {
+        Long userId = SecurityContextUtils.currentUserIdOrThrow();
+        cartService.removeItem(userId, productId, size);
+        return ResponseEntity.noContent().build();
     }
 }

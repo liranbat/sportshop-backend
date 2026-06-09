@@ -1,4 +1,4 @@
-package com.java.sadna.backend.sportshop.entity;
+package com.java.sadna.backend.sportshop.entity.id;
 
 import java.io.Serializable;
 import java.util.Objects;

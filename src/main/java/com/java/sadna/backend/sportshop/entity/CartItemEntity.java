@@ -1,6 +1,6 @@
 package com.java.sadna.backend.sportshop.entity;
 
-import com.java.sadna.backend.sportshop.entity.id.ProductStockId;
+import com.java.sadna.backend.sportshop.entity.id.CartItemId;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -8,9 +8,13 @@ import jakarta.persistence.IdClass;
 import jakarta.persistence.Table;
 
 @Entity
-@Table(name = "product_stock")
-@IdClass(ProductStockId.class)
-public class ProductStockEntity {
+@Table(name = "cart_items")
+@IdClass(CartItemId.class)
+public class CartItemEntity {
+
+    @Id
+    @Column(name = "user_id", nullable = false)
+    private Long userId;
 
     @Id
     @Column(name = "product_id", nullable = false)
@@ -23,10 +27,14 @@ public class ProductStockEntity {
     @Column(name = "quantity", nullable = false)
     private int quantity;
 
-    @Column(name = "low_stock_threshold")
-    private Integer lowStockThreshold;
+    @Column(name = "product_version", nullable = false)
+    private int productVersion;
 
-    protected ProductStockEntity() {
+    protected CartItemEntity() {
+    }
+
+    public Long getUserId() {
+        return userId;
     }
 
     public Long getProductId() {
@@ -41,7 +49,7 @@ public class ProductStockEntity {
         return quantity;
     }
 
-    public Integer getLowStockThreshold() {
-        return lowStockThreshold;
+    public int getProductVersion() {
+        return productVersion;
     }
 }
