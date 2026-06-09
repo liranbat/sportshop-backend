@@ -109,6 +109,14 @@
 			<artifactId>spring-boot-configuration-processor</artifactId>
 			<optional>true</optional>
 		</dependency>
+
+		<!-- Auto-restart on classpath changes during local dev. `optional=true`
+		     keeps it out of downstream consumers and the repackaged fat jar. -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-devtools</artifactId>
+			<optional>true</optional>
+		</dependency>
 	</dependencies>
 
 	<build>
@@ -209,6 +217,31 @@
 							<generatorName>spring</generatorName>
 							<apiPackage>com.java.sadna.backend.sportshop.api.generated.products.api</apiPackage>
 							<modelPackage>com.java.sadna.backend.sportshop.api.generated.products.model</modelPackage>
+							<generateApiTests>false</generateApiTests>
+							<generateApiDocumentation>false</generateApiDocumentation>
+							<generateModelTests>false</generateModelTests>
+							<generateModelDocumentation>false</generateModelDocumentation>
+							<generateSupportingFiles>false</generateSupportingFiles>
+							<configOptions>
+								<interfaceOnly>true</interfaceOnly>
+								<useSpringBoot3>true</useSpringBoot3>
+								<useTags>true</useTags>
+								<openApiNullable>false</openApiNullable>
+								<skipDefaultInterface>true</skipDefaultInterface>
+								<documentationProvider>none</documentationProvider>
+							</configOptions>
+						</configuration>
+					</execution>
+					<execution>
+						<id>generate-cart-api</id>
+						<goals>
+							<goal>generate</goal>
+						</goals>
+						<configuration>
+							<inputSpec>${openapi.specs.staged}/cart-api.yaml</inputSpec>
+							<generatorName>spring</generatorName>
+							<apiPackage>com.java.sadna.backend.sportshop.api.generated.cart.api</apiPackage>
+							<modelPackage>com.java.sadna.backend.sportshop.api.generated.cart.model</modelPackage>
 							<generateApiTests>false</generateApiTests>
 							<generateApiDocumentation>false</generateApiDocumentation>
 							<generateModelTests>false</generateModelTests>

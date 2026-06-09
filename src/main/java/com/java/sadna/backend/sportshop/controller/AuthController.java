@@ -4,19 +4,15 @@ import com.java.sadna.backend.sportshop.api.generated.authusers.api.AuthApi;
 import com.java.sadna.backend.sportshop.api.generated.authusers.model.LoginRequest;
 import com.java.sadna.backend.sportshop.api.generated.authusers.model.RegisterRequest;
 import com.java.sadna.backend.sportshop.api.generated.authusers.model.UserResponse;
-import com.java.sadna.backend.sportshop.exception.UnauthorizedException;
 import com.java.sadna.backend.sportshop.mapper.UserDtoToUserResponseMapper;
+import com.java.sadna.backend.sportshop.security.SecurityContextUtils;
 import com.java.sadna.backend.sportshop.service.AuthService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.util.Optional;
 
 @RestController
 public class AuthController implements AuthApi {
@@ -56,7 +52,7 @@ public class AuthController implements AuthApi {
     // gets 204 + cleared cookies so the frontend can treat logout as always-succeeds.
     @Override
     public ResponseEntity<Void> logout() {
-        authService.logout(currentUserId().orElse(null), httpServletResponse);
+        authService.logout(SecurityContextUtils.currentUserId().orElse(null), httpServletResponse);
         return ResponseEntity.noContent().build();
     }
 
@@ -72,21 +68,10 @@ public class AuthController implements AuthApi {
     @Override
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<UserResponse> getMe() {
-        // @PreAuthorize already guaranteed an authenticated principal; the orElseThrow
-        // only fires if something other than JwtCookieAuthenticationFilter populated the
-        // SecurityContext with a non-Long principal.
-        Long userId = currentUserId().orElseThrow(UnauthorizedException::new);
+        // @PreAuthorize already guaranteed an authenticated principal; the throw inside
+        // currentUserIdOrThrow only fires if something other than JwtCookieAuthenticationFilter
+        // populated the SecurityContext with a non-Long principal.
+        Long userId = SecurityContextUtils.currentUserIdOrThrow();
         return ResponseEntity.ok(userDtoToUserResponseMapper.map(authService.getMe(userId)));
-    }
-
-    private Optional<Long> currentUserId() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth == null) {
-            return Optional.empty();
-        }
-        // Anonymous auth (set by Spring's AnonymousAuthenticationFilter on
-        // permitAll routes) has a String "anonymousUser" principal; only our
-        // JwtCookieAuthenticationFilter puts a Long there.
-        return auth.getPrincipal() instanceof Long userId ? Optional.of(userId) : Optional.empty();
     }
 }
