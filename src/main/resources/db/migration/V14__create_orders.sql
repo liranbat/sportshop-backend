@@ -5,7 +5,7 @@ CREATE TABLE orders (
     user_id               BIGINT        NOT NULL REFERENCES users(id),
     status                VARCHAR(32)   NOT NULL,
     total_price           NUMERIC(10,2) NOT NULL CHECK (total_price >= 0),
-    order_number          CHAR(23)      NOT NULL,
+    order_number          VARCHAR(23)   NOT NULL,
     created_at            TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
     cancelled_at          TIMESTAMPTZ,
     updated_at            TIMESTAMPTZ   NOT NULL DEFAULT NOW(),

@@ -3,7 +3,7 @@ CREATE TABLE payments (
     order_id       BIGINT        NOT NULL REFERENCES orders(id),
     status         VARCHAR(32)   NOT NULL,
     amount         NUMERIC(10,2) NOT NULL CHECK (amount >= 0),
-    currency       CHAR(3)       NOT NULL DEFAULT 'USD',
+    currency       VARCHAR(3)    NOT NULL DEFAULT 'USD',
     provider       VARCHAR(32)   NOT NULL,
     transaction_id VARCHAR(100)  NOT NULL,
     created_at     TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
