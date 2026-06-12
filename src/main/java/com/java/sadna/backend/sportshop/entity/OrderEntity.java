@@ -6,11 +6,11 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import org.hibernate.annotations.Formula;
 
 import java.math.BigDecimal;
+import java.time.OffsetDateTime;
 
-// audit / lifecycle columns (created_at, updated_at, cancelled_at, updated_by) intentionally
-// unmapped -- DB defaults fire on insert; admin / history guides add them when needed.
 @Entity
 @Table(name = "orders")
 public class OrderEntity {
@@ -31,6 +31,21 @@ public class OrderEntity {
     @Column(name = "order_number", nullable = false, length = 23, unique = true)
     private String orderNumber;
 
+    @Column(name = "created_at", nullable = false, insertable = false, updatable = false)
+    private OffsetDateTime createdAt;
+
+    @Column(name = "updated_at", insertable = false, updatable = false)
+    private OffsetDateTime updatedAt;
+
+    @Column(name = "updated_by", insertable = false, updatable = false)
+    private Long updatedBy;
+
+    @Column(name = "cancelled_at", insertable = false, updatable = false)
+    private OffsetDateTime cancelledAt;
+
+    @Column(name = "cancelled_by", insertable = false, updatable = false)
+    private Long cancelledBy;
+
     @Column(name = "shipping_full_name", nullable = false, length = 100)
     private String shippingFullName;
 
@@ -48,6 +63,9 @@ public class OrderEntity {
 
     @Column(name = "shipping_address_line", nullable = false, length = 200)
     private String shippingAddressLine;
+
+    @Formula("(SELECT COUNT(*) FROM order_items oi WHERE oi.order_id = id)")
+    private int itemCount;
 
     protected OrderEntity() {
     }
@@ -116,5 +134,29 @@ public class OrderEntity {
 
     public String getShippingAddressLine() {
         return shippingAddressLine;
+    }
+
+    public OffsetDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public OffsetDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public Long getUpdatedBy() {
+        return updatedBy;
+    }
+
+    public OffsetDateTime getCancelledAt() {
+        return cancelledAt;
+    }
+
+    public Long getCancelledBy() {
+        return cancelledBy;
+    }
+
+    public int getItemCount() {
+        return itemCount;
     }
 }

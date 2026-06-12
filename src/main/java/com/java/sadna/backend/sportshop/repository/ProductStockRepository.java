@@ -35,4 +35,18 @@ public interface ProductStockRepository extends JpaRepository<ProductStockEntity
                           @Param("size") String size,
                           @Param("requestedQty") int requestedQty,
                           @Param("expectedVersion") int expectedVersion);
+
+    // Stock restore inside the cancel transaction. No archive/version gate -- a sold line
+    // gets its units back even if the product was archived or bumped since. 0 rows means
+    // the product_stock row was deleted (e.g. size SKU retired) -- caller logs and skips.
+    @Modifying
+    @Query(value = """
+            UPDATE product_stock
+               SET quantity = quantity + :qty
+             WHERE product_id = :productId
+               AND size       = :size
+            """, nativeQuery = true)
+    int restore(@Param("productId") Long productId,
+                @Param("size") String size,
+                @Param("qty") int qty);
 }
