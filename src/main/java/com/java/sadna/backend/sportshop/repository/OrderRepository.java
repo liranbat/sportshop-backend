@@ -43,4 +43,19 @@ public interface OrderRepository extends JpaRepository<OrderEntity, Long>,
     Optional<Long> findIdByOrderNumber(@Param("orderNumber") String orderNumber);
 
     Optional<OrderEntity> findByOrderNumberAndUserId(String orderNumber, Long userId);
+
+    @Modifying
+    @Query(value = """
+            UPDATE orders
+               SET status       = 'CANCELLED_BY_USER',
+                   cancelled_at = NOW(),
+                   cancelled_by = :userId,
+                   updated_at   = NOW(),
+                   updated_by   = :userId
+             WHERE id      = :id
+               AND user_id = :userId
+               AND status  = 'PAID'
+            """, nativeQuery = true)
+    int cancelOwnUserOrder(@Param("id") Long id,
+                           @Param("userId") Long userId);
 }

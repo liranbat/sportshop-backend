@@ -1,7 +1,9 @@
 package com.java.sadna.backend.sportshop.service;
 
 import com.java.sadna.backend.sportshop.entity.OrderEntity;
+import com.java.sadna.backend.sportshop.entity.OrderItemEntity;
 import com.java.sadna.backend.sportshop.entity.PaymentEntity;
+import com.java.sadna.backend.sportshop.exception.ConflictException;
 import com.java.sadna.backend.sportshop.exception.NotFoundException;
 import com.java.sadna.backend.sportshop.mapper.OrderEntityToOrderSummaryDtoMapper;
 import com.java.sadna.backend.sportshop.mapper.OrderItemEntityToOrderItemDtoMapper;
@@ -15,7 +17,10 @@ import com.java.sadna.backend.sportshop.model.ShippingDetailsDto;
 import com.java.sadna.backend.sportshop.repository.OrderItemRepository;
 import com.java.sadna.backend.sportshop.repository.OrderRepository;
 import com.java.sadna.backend.sportshop.repository.PaymentRepository;
+import com.java.sadna.backend.sportshop.repository.ProductStockRepository;
 import com.java.sadna.backend.sportshop.repository.specification.OrderSpecifications;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
@@ -25,10 +30,13 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.Comparator;
 import java.util.List;
 
 @Service
 public class OrderService {
+
+    private static final Logger log = LoggerFactory.getLogger(OrderService.class);
 
     private static final String SORT_FIELD_TOTAL = "total";
     private static final String SORT_PATH_CREATED_AT = "createdAt";
@@ -38,11 +46,17 @@ public class OrderService {
 
     private static final int DEFAULT_PAGE_SIZE = 10;
 
+    private static final String STATUS_PAID = "PAID";
+
     private static final String MSG_ORDER_NOT_FOUND = "Order not found.";
+    private static final String MSG_ORDER_CANNOT_BE_CANCELLED = "This order can no longer be cancelled.";
+    private static final String MSG_PAYMENT_REFUND_INVARIANT =
+            "Payment row not in SUCCESS state for cancelled order; transaction rolled back.";
 
     private final OrderRepository orderRepository;
     private final OrderItemRepository orderItemRepository;
     private final PaymentRepository paymentRepository;
+    private final ProductStockRepository productStockRepository;
     private final OrderEntityToOrderSummaryDtoMapper orderEntityToOrderSummaryDtoMapper;
     private final OrderItemEntityToOrderItemDtoMapper orderItemEntityToOrderItemDtoMapper;
     private final PaymentEntityToOrderPaymentDtoMapper paymentEntityToOrderPaymentDtoMapper;
@@ -51,6 +65,7 @@ public class OrderService {
     public OrderService(OrderRepository orderRepository,
                         OrderItemRepository orderItemRepository,
                         PaymentRepository paymentRepository,
+                        ProductStockRepository productStockRepository,
                         OrderEntityToOrderSummaryDtoMapper orderEntityToOrderSummaryDtoMapper,
                         OrderItemEntityToOrderItemDtoMapper orderItemEntityToOrderItemDtoMapper,
                         PaymentEntityToOrderPaymentDtoMapper paymentEntityToOrderPaymentDtoMapper,
@@ -58,6 +73,7 @@ public class OrderService {
         this.orderRepository = orderRepository;
         this.orderItemRepository = orderItemRepository;
         this.paymentRepository = paymentRepository;
+        this.productStockRepository = productStockRepository;
         this.orderEntityToOrderSummaryDtoMapper = orderEntityToOrderSummaryDtoMapper;
         this.orderItemEntityToOrderItemDtoMapper = orderItemEntityToOrderItemDtoMapper;
         this.paymentEntityToOrderPaymentDtoMapper = paymentEntityToOrderPaymentDtoMapper;
@@ -129,6 +145,52 @@ public class OrderService {
                 shipping,
                 paymentDto
         );
+    }
+
+    @Transactional
+    public void cancelForUser(String orderNumber, Long userId) {
+        log.info("Cancel started: userId={} orderNumber={}", userId, orderNumber);
+
+        OrderEntity order = orderRepository.findByOrderNumberAndUserId(orderNumber, userId)
+                .orElseThrow(() -> new NotFoundException(MSG_ORDER_NOT_FOUND));
+
+        if (!STATUS_PAID.equals(order.getStatus())) {
+            log.warn("Cancel rejected: orderId={} userId={} currentStatus={}",
+                    order.getId(), userId, order.getStatus());
+            throw new ConflictException(MSG_ORDER_CANNOT_BE_CANCELLED);
+        }
+
+        int orderAffected = orderRepository.cancelOwnUserOrder(order.getId(), userId);
+        if (orderAffected == 0) {
+            log.warn("Cancel race: orderId={} userId={} -- order moved off PAID between pre-flight and write",
+                    order.getId(), userId);
+            throw new ConflictException(MSG_ORDER_CANNOT_BE_CANCELLED);
+        }
+
+        // sort by (productId, size) so parallel cancels of *different* orders that share
+        // product_stock rows hit them in the same order as checkouts -- no deadlocks
+        List<OrderItemEntity> items = orderItemRepository.findByOrderIdOrderByIdAsc(order.getId()).stream()
+                .sorted(Comparator
+                        .comparing(OrderItemEntity::getProductId)
+                        .thenComparing(OrderItemEntity::getSize))
+                .toList();
+        for (OrderItemEntity item : items) {
+            int restored = productStockRepository.restore(
+                    item.getProductId(), item.getSize(), item.getQuantity());
+            if (restored == 0) {
+                log.warn("Stock restore skipped (product_stock row missing): orderId={} productId={} size={} qty={}",
+                        order.getId(), item.getProductId(), item.getSize(), item.getQuantity());
+            }
+        }
+
+        int refunded = paymentRepository.refundIfSuccess(order.getId(), userId);
+        if (refunded == 0) {
+            log.error("Payment refund invariant break: orderId={} userId={}", order.getId(), userId);
+            throw new IllegalStateException(MSG_PAYMENT_REFUND_INVARIANT);
+        }
+
+        log.info("Cancel completed: orderId={} userId={} orderNumber={}",
+                order.getId(), userId, orderNumber);
     }
 
     // Lower bound for dateFrom: 00:00:00Z of the same day, used with `>=`.

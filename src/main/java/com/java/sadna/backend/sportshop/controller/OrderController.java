@@ -11,7 +11,6 @@ import com.java.sadna.backend.sportshop.model.OrderSummaryDto;
 import com.java.sadna.backend.sportshop.model.PagedResult;
 import com.java.sadna.backend.sportshop.security.SecurityContextUtils;
 import com.java.sadna.backend.sportshop.service.OrderService;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.RestController;
@@ -71,9 +70,11 @@ public class OrderController implements OrdersApi {
         return ResponseEntity.ok(orderDetailDtoToOrderDetailMapper.map(detail));
     }
 
-    // Stub -- wired in Step 2.2. skipDefaultInterface=true forces implementation here.
     @Override
-    public ResponseEntity<OrderDetail> cancelOrder(String orderNumber) {
-        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<Void> cancelOrder(String orderNumber) {
+        Long userId = SecurityContextUtils.currentUserIdOrThrow();
+        orderService.cancelForUser(orderNumber, userId);
+        return ResponseEntity.noContent().build();
     }
 }
