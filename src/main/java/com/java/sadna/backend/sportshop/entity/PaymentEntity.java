@@ -8,9 +8,8 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
 import java.math.BigDecimal;
+import java.time.OffsetDateTime;
 
-// created_at / updated_at intentionally unmapped -- DB defaults fire on insert; refund
-// guides add the updated_at mapping when they need to stamp it.
 @Entity
 @Table(name = "payments")
 public class PaymentEntity {
@@ -36,6 +35,15 @@ public class PaymentEntity {
 
     @Column(name = "transaction_id", nullable = false, length = 100)
     private String transactionId;
+
+    @Column(name = "created_at", nullable = false, insertable = false, updatable = false)
+    private OffsetDateTime createdAt;
+
+    @Column(name = "updated_at", insertable = false, updatable = false)
+    private OffsetDateTime updatedAt;
+
+    @Column(name = "updated_by", insertable = false, updatable = false)
+    private Long updatedBy;
 
     protected PaymentEntity() {
     }
@@ -80,5 +88,17 @@ public class PaymentEntity {
 
     public String getTransactionId() {
         return transactionId;
+    }
+
+    public OffsetDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public OffsetDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public Long getUpdatedBy() {
+        return updatedBy;
     }
 }

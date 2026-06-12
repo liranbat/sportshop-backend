@@ -2,6 +2,7 @@ package com.java.sadna.backend.sportshop.repository;
 
 import com.java.sadna.backend.sportshop.entity.OrderEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -9,7 +10,8 @@ import org.springframework.data.repository.query.Param;
 import java.math.BigDecimal;
 import java.util.Optional;
 
-public interface OrderRepository extends JpaRepository<OrderEntity, Long> {
+public interface OrderRepository extends JpaRepository<OrderEntity, Long>,
+        JpaSpecificationExecutor<OrderEntity> {
 
     // ON CONFLICT DO NOTHING keeps the order-number retry loop inside the same transaction --
     // a unique-violation on a raw INSERT would abort the PG transaction outright.
