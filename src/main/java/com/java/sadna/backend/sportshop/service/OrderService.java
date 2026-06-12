@@ -1,10 +1,20 @@
 package com.java.sadna.backend.sportshop.service;
 
 import com.java.sadna.backend.sportshop.entity.OrderEntity;
+import com.java.sadna.backend.sportshop.entity.PaymentEntity;
+import com.java.sadna.backend.sportshop.exception.NotFoundException;
 import com.java.sadna.backend.sportshop.mapper.OrderEntityToOrderSummaryDtoMapper;
+import com.java.sadna.backend.sportshop.mapper.OrderItemEntityToOrderItemDtoMapper;
+import com.java.sadna.backend.sportshop.mapper.PaymentEntityToOrderPaymentDtoMapper;
+import com.java.sadna.backend.sportshop.model.OrderDetailDto;
+import com.java.sadna.backend.sportshop.model.OrderItemDto;
+import com.java.sadna.backend.sportshop.model.OrderPaymentDto;
 import com.java.sadna.backend.sportshop.model.OrderSummaryDto;
 import com.java.sadna.backend.sportshop.model.PagedResult;
+import com.java.sadna.backend.sportshop.model.ShippingDetailsDto;
+import com.java.sadna.backend.sportshop.repository.OrderItemRepository;
 import com.java.sadna.backend.sportshop.repository.OrderRepository;
+import com.java.sadna.backend.sportshop.repository.PaymentRepository;
 import com.java.sadna.backend.sportshop.repository.specification.OrderSpecifications;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
@@ -15,6 +25,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.List;
 
 @Service
 public class OrderService {
@@ -27,15 +38,29 @@ public class OrderService {
 
     private static final int DEFAULT_PAGE_SIZE = 10;
 
+    private static final String MSG_ORDER_NOT_FOUND = "Order not found.";
+
     private final OrderRepository orderRepository;
+    private final OrderItemRepository orderItemRepository;
+    private final PaymentRepository paymentRepository;
     private final OrderEntityToOrderSummaryDtoMapper orderEntityToOrderSummaryDtoMapper;
+    private final OrderItemEntityToOrderItemDtoMapper orderItemEntityToOrderItemDtoMapper;
+    private final PaymentEntityToOrderPaymentDtoMapper paymentEntityToOrderPaymentDtoMapper;
     private final PaginationService paginationService;
 
     public OrderService(OrderRepository orderRepository,
+                        OrderItemRepository orderItemRepository,
+                        PaymentRepository paymentRepository,
                         OrderEntityToOrderSummaryDtoMapper orderEntityToOrderSummaryDtoMapper,
+                        OrderItemEntityToOrderItemDtoMapper orderItemEntityToOrderItemDtoMapper,
+                        PaymentEntityToOrderPaymentDtoMapper paymentEntityToOrderPaymentDtoMapper,
                         PaginationService paginationService) {
         this.orderRepository = orderRepository;
+        this.orderItemRepository = orderItemRepository;
+        this.paymentRepository = paymentRepository;
         this.orderEntityToOrderSummaryDtoMapper = orderEntityToOrderSummaryDtoMapper;
+        this.orderItemEntityToOrderItemDtoMapper = orderItemEntityToOrderItemDtoMapper;
+        this.paymentEntityToOrderPaymentDtoMapper = paymentEntityToOrderPaymentDtoMapper;
         this.paginationService = paginationService;
     }
 
@@ -66,6 +91,43 @@ public class OrderService {
         return paginationService.paginate(
                 orderRepository, spec, sort, page, pageSize, DEFAULT_PAGE_SIZE,
                 orderEntityToOrderSummaryDtoMapper
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public OrderDetailDto getDetailForUser(String orderNumber, Long userId) {
+        // Owner gate: missing OR not-owned both surface as the same 404, no information leak.
+        OrderEntity order = orderRepository.findByOrderNumberAndUserId(orderNumber, userId)
+                .orElseThrow(() -> new NotFoundException(MSG_ORDER_NOT_FOUND));
+
+        List<OrderItemDto> items = orderItemRepository.findByOrderIdOrderByIdAsc(order.getId()).stream()
+                .map(orderItemEntityToOrderItemDtoMapper::map)
+                .toList();
+
+        PaymentEntity payment = paymentRepository.findByOrderId(order.getId())
+                .orElseThrow(() -> new IllegalStateException(
+                        "Payment row missing for orderNumber=" + order.getOrderNumber()));
+        OrderPaymentDto paymentDto = paymentEntityToOrderPaymentDtoMapper.map(payment);
+
+        ShippingDetailsDto shipping = new ShippingDetailsDto(
+                order.getShippingFullName(),
+                order.getShippingEmail(),
+                order.getShippingPhone(),
+                order.getShippingCountry(),
+                order.getShippingCity(),
+                order.getShippingAddressLine()
+        );
+
+        return new OrderDetailDto(
+                order.getOrderNumber(),
+                order.getStatus(),
+                order.getCreatedAt(),
+                order.getCancelledAt(),
+                order.getTotalPrice(),
+                order.getItemCount(),
+                items,
+                shipping,
+                paymentDto
         );
     }
 

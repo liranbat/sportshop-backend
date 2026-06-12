@@ -4,7 +4,9 @@ import com.java.sadna.backend.sportshop.api.generated.orders.api.OrdersApi;
 import com.java.sadna.backend.sportshop.api.generated.orders.model.OrderDetail;
 import com.java.sadna.backend.sportshop.api.generated.orders.model.OrderListPage;
 import com.java.sadna.backend.sportshop.api.generated.orders.model.OrderStatus;
+import com.java.sadna.backend.sportshop.mapper.OrderDetailDtoToOrderDetailMapper;
 import com.java.sadna.backend.sportshop.mapper.PagedOrderSummaryDtoToOrderListPageMapper;
+import com.java.sadna.backend.sportshop.model.OrderDetailDto;
 import com.java.sadna.backend.sportshop.model.OrderSummaryDto;
 import com.java.sadna.backend.sportshop.model.PagedResult;
 import com.java.sadna.backend.sportshop.security.SecurityContextUtils;
@@ -22,11 +24,14 @@ public class OrderController implements OrdersApi {
 
     private final OrderService orderService;
     private final PagedOrderSummaryDtoToOrderListPageMapper pagedOrderSummaryDtoToOrderListPageMapper;
+    private final OrderDetailDtoToOrderDetailMapper orderDetailDtoToOrderDetailMapper;
 
     public OrderController(OrderService orderService,
-                           PagedOrderSummaryDtoToOrderListPageMapper pagedOrderSummaryDtoToOrderListPageMapper) {
+                           PagedOrderSummaryDtoToOrderListPageMapper pagedOrderSummaryDtoToOrderListPageMapper,
+                           OrderDetailDtoToOrderDetailMapper orderDetailDtoToOrderDetailMapper) {
         this.orderService = orderService;
         this.pagedOrderSummaryDtoToOrderListPageMapper = pagedOrderSummaryDtoToOrderListPageMapper;
+        this.orderDetailDtoToOrderDetailMapper = orderDetailDtoToOrderDetailMapper;
     }
 
     @Override
@@ -58,12 +63,15 @@ public class OrderController implements OrdersApi {
         return ResponseEntity.ok(pagedOrderSummaryDtoToOrderListPageMapper.map(result));
     }
 
-    // Stubs -- wired in Steps 2.1 / 2.2. skipDefaultInterface=true forces implementation here.
     @Override
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<OrderDetail> getOrder(String orderNumber) {
-        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
+        Long userId = SecurityContextUtils.currentUserIdOrThrow();
+        OrderDetailDto detail = orderService.getDetailForUser(orderNumber, userId);
+        return ResponseEntity.ok(orderDetailDtoToOrderDetailMapper.map(detail));
     }
 
+    // Stub -- wired in Step 2.2. skipDefaultInterface=true forces implementation here.
     @Override
     public ResponseEntity<OrderDetail> cancelOrder(String orderNumber) {
         return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
