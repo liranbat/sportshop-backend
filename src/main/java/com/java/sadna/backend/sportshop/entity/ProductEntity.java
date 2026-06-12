@@ -12,8 +12,8 @@ import jakarta.persistence.Table;
 import jakarta.persistence.Version;
 
 import java.math.BigDecimal;
+import java.time.OffsetDateTime;
 
-// audit columns (updated_at/_by, archived_at/_by) intentionally unmapped — JPA validate ignores extras
 @Entity
 @Table(name = "products")
 public class ProductEntity {
@@ -56,6 +56,18 @@ public class ProductEntity {
     @Column(name = "is_archived", nullable = false)
     private boolean archived;
 
+    @Column(name = "updated_at", insertable = false, updatable = false)
+    private OffsetDateTime updatedAt;
+
+    @Column(name = "updated_by", insertable = false, updatable = false)
+    private Long updatedBy;
+
+    @Column(name = "archived_at", insertable = false, updatable = false)
+    private OffsetDateTime archivedAt;
+
+    @Column(name = "archived_by", insertable = false, updatable = false)
+    private Long archivedBy;
+
     protected ProductEntity() {
     }
 
@@ -93,5 +105,21 @@ public class ProductEntity {
 
     public boolean isArchived() {
         return archived;
+    }
+
+    public OffsetDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public Long getUpdatedBy() {
+        return updatedBy;
+    }
+
+    public OffsetDateTime getArchivedAt() {
+        return archivedAt;
+    }
+
+    public Long getArchivedBy() {
+        return archivedBy;
     }
 }
