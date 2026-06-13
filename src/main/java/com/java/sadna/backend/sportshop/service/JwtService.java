@@ -19,8 +19,6 @@ import java.util.Optional;
 @Service
 public class JwtService {
 
-    private static final String CLAIM_ADMIN = "isAdmin";
-
     // HS256 requires >= 256 bits of key material. We accept the secret as plain
     // UTF-8 (no base64) and validate length at construction so a misconfigured
     // secret crashes startup with a clear message instead of producing tokens
@@ -43,11 +41,10 @@ public class JwtService {
         this.accessTokenTtl = appProperties.getAuth().getAccessTokenTtl();
     }
 
-    public String issueAccessToken(long userId, boolean isAdmin) {
+    public String issueAccessToken(long userId) {
         Instant now = Instant.now();
         return Jwts.builder()
                 .subject(String.valueOf(userId))
-                .claim(CLAIM_ADMIN, isAdmin)
                 .issuedAt(Date.from(now))
                 .expiration(Date.from(now.plus(accessTokenTtl)))
                 .signWith(signingKey, Jwts.SIG.HS256)
@@ -62,8 +59,7 @@ public class JwtService {
                     .parseSignedClaims(jwt)
                     .getPayload();
             long userId = Long.parseLong(claims.getSubject());
-            boolean isAdmin = Boolean.TRUE.equals(claims.get(CLAIM_ADMIN, Boolean.class));
-            return Optional.of(new AccessTokenClaims(userId, isAdmin));
+            return Optional.of(new AccessTokenClaims(userId));
         } catch (JwtException | IllegalArgumentException ex) {
             // Bad signature, expired, malformed, or non-numeric subject -- caller treats this as "no auth".
             return Optional.empty();
