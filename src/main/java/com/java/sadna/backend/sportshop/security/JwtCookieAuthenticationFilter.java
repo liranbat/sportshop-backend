@@ -1,5 +1,6 @@
 package com.java.sadna.backend.sportshop.security;
 
+import com.java.sadna.backend.sportshop.entity.UserEntity;
 import com.java.sadna.backend.sportshop.repository.UserRepository;
 import com.java.sadna.backend.sportshop.service.CookieService;
 import com.java.sadna.backend.sportshop.service.JwtService;
@@ -18,18 +19,14 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
-// Reads the access_token cookie on every request, parses it via JwtService,
-// and -- if valid AND the user is still active (not soft-deleted) -- populates
-// SecurityContext with a UsernamePasswordAuthenticationToken whose principal is the
-// Long userId and whose single authority reflects the isAdmin claim (ROLE_ADMIN vs
-// ROLE_USER). Anything invalid / expired / missing / soft-deleted leaves the context
-// untouched, which means SecurityConfig's authorize rules then decide whether the
-// request is allowed (permitAll lanes) or 401'd.
-//
-// The soft-deleted check closes the ~15-min "valid JWT, user soft-deleted" window:
-// without it, an admin-deleted (or self-deleted) user could keep authenticating with
-// their cached access JWT until exp. One PK lookup on users(id) per authed request --
-// the table is small and the row is hot in the buffer cache.
+// Reads the access_token cookie, validates the JWT, then loads the user row to:
+//   1. confirm the user still exists and isn't soft-deleted (closes the
+//      "valid JWT but admin-deleted account" window),
+//   2. derive the LIVE is_admin authority -- the JWT no longer carries an
+//      isAdmin claim, so promotion/demotion takes effect on the next request
+//      without rotating tokens,
+//   3. echo the role back to the client via the X-Auth-Role response header
+//      so the frontend can keep its cached `me` in sync without polling /me.
 //
 // NOT a @Component: instantiated by SecurityConfig.securityFilterChain so it
 // only runs inside the Spring Security chain. If it were a bean, Spring Boot
@@ -38,6 +35,10 @@ public class JwtCookieAuthenticationFilter extends OncePerRequestFilter {
 
     public static final String AUTHORITY_ADMIN = "ROLE_ADMIN";
     public static final String AUTHORITY_USER = "ROLE_USER";
+
+    public static final String ROLE_HEADER = "X-Auth-Role";
+    public static final String ROLE_ADMIN_VALUE = "admin";
+    public static final String ROLE_USER_VALUE = "user";
 
     private final JwtService jwtService;
     private final UserRepository userRepository;
@@ -53,14 +54,17 @@ public class JwtCookieAuthenticationFilter extends OncePerRequestFilter {
         if (SecurityContextHolder.getContext().getAuthentication() == null) {
             readAccessCookie(request)
                     .flatMap(jwtService::parseAccessToken)
-                    .filter(this::userStillActive)
-                    .ifPresent(this::populateSecurityContext);
+                    .flatMap(this::loadActiveUser)
+                    .ifPresent(entity -> {
+                        populateSecurityContext(entity);
+                        response.setHeader(ROLE_HEADER, entity.isAdmin() ? ROLE_ADMIN_VALUE : ROLE_USER_VALUE);
+                    });
         }
         chain.doFilter(request, response);
     }
 
-    private boolean userStillActive(AccessTokenClaims claims) {
-        return userRepository.findByIdAndDeletedFalse(claims.getUserId()).isPresent();
+    private Optional<UserEntity> loadActiveUser(AccessTokenClaims claims) {
+        return userRepository.findByIdAndDeletedFalse(claims.getUserId());
     }
 
     private Optional<String> readAccessCookie(HttpServletRequest request) {
@@ -74,12 +78,12 @@ public class JwtCookieAuthenticationFilter extends OncePerRequestFilter {
                 .findFirst();
     }
 
-    private void populateSecurityContext(AccessTokenClaims claims) {
+    private void populateSecurityContext(UserEntity entity) {
         SimpleGrantedAuthority authority = new SimpleGrantedAuthority(
-                claims.isAdmin() ? AUTHORITY_ADMIN : AUTHORITY_USER
+                entity.isAdmin() ? AUTHORITY_ADMIN : AUTHORITY_USER
         );
         UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
-                claims.getUserId(), null, List.of(authority)
+                entity.getId(), null, List.of(authority)
         );
         SecurityContextHolder.getContext().setAuthentication(authentication);
     }
