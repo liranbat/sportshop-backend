@@ -120,7 +120,7 @@ public class AuthService {
         // Mutated in place; JPA dirty-checking inside @Transactional flushes the UPDATE.
         row.rotate(newRefreshToken, newExpiresAt);
 
-        String accessToken = jwtService.issueAccessToken(user.getId(), user.isAdmin());
+        String accessToken = jwtService.issueAccessToken(user.getId());
         attachSessionCookies(response, accessToken, newRefreshToken);
         return userEntityToUserDtoMapper.map(user);
     }
@@ -136,7 +136,7 @@ public class AuthService {
         String refreshToken = generateRefreshTokenValue();
         OffsetDateTime expiresAt = OffsetDateTime.now().plus(refreshTokenTtl);
         upsertRefreshTokenRow(entity.getId(), refreshToken, expiresAt);
-        String accessToken = jwtService.issueAccessToken(entity.getId(), entity.isAdmin());
+        String accessToken = jwtService.issueAccessToken(entity.getId());
         attachSessionCookies(response, accessToken, refreshToken);
     }
 
