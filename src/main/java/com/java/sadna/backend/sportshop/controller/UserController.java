@@ -1,10 +1,17 @@
 package com.java.sadna.backend.sportshop.controller;
 
+import com.java.sadna.backend.sportshop.api.generated.authusers.api.AdminUsersApi;
 import com.java.sadna.backend.sportshop.api.generated.authusers.api.UsersApi;
 import com.java.sadna.backend.sportshop.api.generated.authusers.model.ChangePasswordRequest;
 import com.java.sadna.backend.sportshop.api.generated.authusers.model.UpdateProfileRequest;
+import com.java.sadna.backend.sportshop.api.generated.authusers.model.UserListPage;
 import com.java.sadna.backend.sportshop.api.generated.authusers.model.UserResponse;
+import com.java.sadna.backend.sportshop.api.generated.authusers.model.UserRoleFilter;
+import com.java.sadna.backend.sportshop.api.generated.authusers.model.UserStatusFilter;
+import com.java.sadna.backend.sportshop.mapper.PagedUserDtoToUserListPageMapper;
 import com.java.sadna.backend.sportshop.mapper.UserDtoToUserResponseMapper;
+import com.java.sadna.backend.sportshop.model.PagedResult;
+import com.java.sadna.backend.sportshop.model.UserDto;
 import com.java.sadna.backend.sportshop.security.SecurityContextUtils;
 import com.java.sadna.backend.sportshop.service.UserService;
 import jakarta.servlet.http.HttpServletResponse;
@@ -17,19 +24,22 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.concurrent.CompletableFuture;
 
 @RestController
-public class UserController implements UsersApi {
+public class UserController implements UsersApi, AdminUsersApi {
 
     private static final Logger log = LoggerFactory.getLogger(UserController.class);
 
     private final UserService userService;
     private final UserDtoToUserResponseMapper userDtoToUserResponseMapper;
+    private final PagedUserDtoToUserListPageMapper pagedUserDtoToUserListPageMapper;
     private final HttpServletResponse httpServletResponse;
 
     public UserController(UserService userService,
                           UserDtoToUserResponseMapper userDtoToUserResponseMapper,
+                          PagedUserDtoToUserListPageMapper pagedUserDtoToUserListPageMapper,
                           HttpServletResponse httpServletResponse) {
         this.userService = userService;
         this.userDtoToUserResponseMapper = userDtoToUserResponseMapper;
+        this.pagedUserDtoToUserListPageMapper = pagedUserDtoToUserListPageMapper;
         this.httpServletResponse = httpServletResponse;
     }
 
@@ -65,5 +75,39 @@ public class UserController implements UsersApi {
             }
         });
         return ResponseEntity.noContent().build();
+    }
+
+    @Override
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<UserListPage> listAdminUsers(UserRoleFilter role,
+                                                       UserStatusFilter status,
+                                                       String q,
+                                                       String sortField,
+                                                       String sortDirection,
+                                                       Integer page,
+                                                       Integer pageSize) {
+        Boolean isAdmin = toIsAdmin(role);
+        Boolean isDeleted = toIsDeleted(status);
+
+        PagedResult<UserDto> result = userService.listUsers(
+                isAdmin, isDeleted, q, sortField, sortDirection, page, pageSize
+        );
+        return ResponseEntity.ok(pagedUserDtoToUserListPageMapper.map(result));
+    }
+
+    private static Boolean toIsAdmin(UserRoleFilter role) {
+        if (role == null) return null;
+        return switch (role) {
+            case ADMIN -> Boolean.TRUE;
+            case USER -> Boolean.FALSE;
+        };
+    }
+
+    private static Boolean toIsDeleted(UserStatusFilter status) {
+        if (status == null) return null;
+        return switch (status) {
+            case ACTIVE -> Boolean.FALSE;
+            case DELETED -> Boolean.TRUE;
+        };
     }
 }

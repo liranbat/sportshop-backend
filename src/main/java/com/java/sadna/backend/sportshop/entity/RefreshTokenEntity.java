@@ -29,9 +29,6 @@ public class RefreshTokenEntity {
     @Column(name = "created_at", nullable = false)
     private OffsetDateTime createdAt;
 
-    @Column(name = "last_used_at")
-    private OffsetDateTime lastUsedAt;
-
     protected RefreshTokenEntity() {
     }
 
@@ -62,15 +59,10 @@ public class RefreshTokenEntity {
         return createdAt;
     }
 
-    public OffsetDateTime getLastUsedAt() {
-        return lastUsedAt;
-    }
-
-    // Mutable setters for the rotation path: /auth/refresh updates token + expiresAt + lastUsedAt
-    // in place on the same row (id + user_id stay fixed thanks to UNIQUE(user_id)).
+    // /auth/refresh updates token + expiresAt in place on the same row
+    // (id + user_id stay fixed thanks to UNIQUE(user_id)).
     public void rotate(String newToken, OffsetDateTime newExpiresAt) {
         this.token = newToken;
         this.expiresAt = newExpiresAt;
-        this.lastUsedAt = OffsetDateTime.now();
     }
 }

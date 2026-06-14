@@ -6,11 +6,15 @@ import com.java.sadna.backend.sportshop.entity.UserEntity;
 import com.java.sadna.backend.sportshop.exception.ConflictException;
 import com.java.sadna.backend.sportshop.exception.UnauthorizedException;
 import com.java.sadna.backend.sportshop.mapper.UserEntityToUserDtoMapper;
+import com.java.sadna.backend.sportshop.model.PagedResult;
 import com.java.sadna.backend.sportshop.model.UserDto;
 import com.java.sadna.backend.sportshop.repository.CartItemRepository;
 import com.java.sadna.backend.sportshop.repository.RefreshTokenRepository;
 import com.java.sadna.backend.sportshop.repository.UserRepository;
+import com.java.sadna.backend.sportshop.repository.specification.UserSpecifications;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpHeaders;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -26,11 +30,23 @@ public class UserService {
     private static final String CONCURRENT_MODIFICATION_MESSAGE =
             "Your account was modified elsewhere. Please refresh and try again.";
 
+    private static final String SORT_FIELD_NAME = "name";
+    private static final String SORT_FIELD_EMAIL = "email";
+    private static final String SORT_PATH_ID = "id";
+    private static final String SORT_PATH_FIRST_NAME = "firstName";
+    private static final String SORT_PATH_LAST_NAME = "lastName";
+    private static final String SORT_PATH_EMAIL = "email";
+    private static final String SORT_DIRECTION_ASC = "asc";
+    private static final String SORT_DIRECTION_DESC = "desc";
+
+    private static final int DEFAULT_PAGE_SIZE = 20;
+
     private final UserRepository userRepository;
     private final RefreshTokenRepository refreshTokenRepository;
     private final CartItemRepository cartItemRepository;
     private final PasswordEncoder passwordEncoder;
     private final CookieService cookieService;
+    private final PaginationService paginationService;
     private final UserEntityToUserDtoMapper userEntityToUserDtoMapper;
 
     public UserService(UserRepository userRepository,
@@ -38,12 +54,14 @@ public class UserService {
                        CartItemRepository cartItemRepository,
                        PasswordEncoder passwordEncoder,
                        CookieService cookieService,
+                       PaginationService paginationService,
                        UserEntityToUserDtoMapper userEntityToUserDtoMapper) {
         this.userRepository = userRepository;
         this.refreshTokenRepository = refreshTokenRepository;
         this.cartItemRepository = cartItemRepository;
         this.passwordEncoder = passwordEncoder;
         this.cookieService = cookieService;
+        this.paginationService = paginationService;
         this.userEntityToUserDtoMapper = userEntityToUserDtoMapper;
     }
 
@@ -115,6 +133,28 @@ public class UserService {
         cartItemRepository.deleteByUserId(userId);
     }
 
+    @Transactional(readOnly = true)
+    public PagedResult<UserDto> listUsers(Boolean isAdmin,
+                                          Boolean isDeleted,
+                                          String q,
+                                          String sortField,
+                                          String sortDirection,
+                                          Integer page,
+                                          Integer pageSize) {
+        Specification<UserEntity> spec = Specification.allOf(
+                UserSpecifications.isAdminEquals(isAdmin),
+                UserSpecifications.isDeletedEquals(isDeleted),
+                UserSpecifications.searchMatches(q)
+        );
+
+        Sort sort = buildSort(sortField, sortDirection);
+
+        return paginationService.paginate(
+                userRepository, spec, sort, page, pageSize, DEFAULT_PAGE_SIZE,
+                userEntityToUserDtoMapper
+        );
+    }
+
     private UserEntity loadActiveOrThrow(Long userId) {
         return userRepository.findByIdAndDeletedFalse(userId)
                 .orElseThrow(() -> new UnauthorizedException(USER_NOT_ACTIVE_MESSAGE));
@@ -123,5 +163,34 @@ public class UserService {
     private void attachClearedCookies(HttpServletResponse response) {
         response.addHeader(HttpHeaders.SET_COOKIE, cookieService.clearAccessCookie().toString());
         response.addHeader(HttpHeaders.SET_COOKIE, cookieService.clearRefreshCookie().toString());
+    }
+
+    private Sort buildSort(String sortField, String sortDirection) {
+        // Default: id desc, no extra tiebreaker (id is already unique).
+        if (sortField == null || sortField.isBlank()) {
+            return Sort.by(Sort.Order.desc(SORT_PATH_ID));
+        }
+        if (SORT_FIELD_NAME.equalsIgnoreCase(sortField)) {
+            Sort.Direction dir = directionFor(sortDirection, Sort.Direction.ASC);
+            return Sort.by(
+                    new Sort.Order(dir, SORT_PATH_FIRST_NAME),
+                    new Sort.Order(dir, SORT_PATH_LAST_NAME),
+                    Sort.Order.asc(SORT_PATH_ID)
+            );
+        }
+        if (SORT_FIELD_EMAIL.equalsIgnoreCase(sortField)) {
+            Sort.Direction dir = directionFor(sortDirection, Sort.Direction.ASC);
+            return Sort.by(new Sort.Order(dir, SORT_PATH_EMAIL), Sort.Order.asc(SORT_PATH_ID));
+        }
+        // sortField=id (or unknown) -> sort by id with default desc.
+        Sort.Direction dir = directionFor(sortDirection, Sort.Direction.DESC);
+        return Sort.by(new Sort.Order(dir, SORT_PATH_ID));
+    }
+
+    private Sort.Direction directionFor(String sortDirection, Sort.Direction fieldDefault) {
+        if (sortDirection == null || sortDirection.isBlank()) return fieldDefault;
+        if (SORT_DIRECTION_ASC.equalsIgnoreCase(sortDirection)) return Sort.Direction.ASC;
+        if (SORT_DIRECTION_DESC.equalsIgnoreCase(sortDirection)) return Sort.Direction.DESC;
+        return fieldDefault;
     }
 }

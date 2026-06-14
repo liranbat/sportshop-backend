@@ -11,6 +11,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import java.time.OffsetDateTime;
 
@@ -52,6 +53,14 @@ public class GlobalExceptionHandler {
         log.debug("Access denied [status={}]: {}", status.value(), e.getMessage());
         ApiError body = new ApiError(OffsetDateTime.now(), currentTraceId(), code, message);
         return ResponseEntity.status(status).body(body);
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ApiError> handleTypeMismatch(MethodArgumentTypeMismatchException e) {
+        log.debug("Bad request param [name={}, value={}]: {}", e.getName(), e.getValue(), e.getMessage());
+        String message = "Invalid value '" + e.getValue() + "' for parameter '" + e.getName() + "'.";
+        ApiError body = new ApiError(OffsetDateTime.now(), currentTraceId(), "BAD_REQUEST", message);
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
     }
 
     @ExceptionHandler(Exception.class)
