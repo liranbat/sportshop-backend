@@ -7,13 +7,17 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.validation.FieldError;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import java.time.OffsetDateTime;
+import java.util.stream.Collectors;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -60,6 +64,36 @@ public class GlobalExceptionHandler {
         log.debug("Bad request param [name={}, value={}]: {}", e.getName(), e.getValue(), e.getMessage());
         String message = "Invalid value '" + e.getValue() + "' for parameter '" + e.getName() + "'.";
         ApiError body = new ApiError(OffsetDateTime.now(), currentTraceId(), "BAD_REQUEST", message);
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
+    }
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<ApiError> handleValidation(MethodArgumentNotValidException e) {
+        String message = e.getBindingResult().getFieldErrors().stream()
+                .map(this::formatFieldError)
+                .collect(Collectors.joining("; "));
+        if (message.isEmpty()) {
+            message = "Request body validation failed.";
+        }
+        log.debug("Validation failed: {}", message);
+        ApiError body = new ApiError(OffsetDateTime.now(), currentTraceId(), "BAD_REQUEST", message);
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
+    }
+
+    private String formatFieldError(FieldError fe) {
+        String defaultMessage = fe.getDefaultMessage();
+        return fe.getField() + ": " + (defaultMessage != null ? defaultMessage : "invalid");
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiError> handleNotReadable(HttpMessageNotReadableException e) {
+        log.debug("Malformed request body: {}", e.getMessage());
+        ApiError body = new ApiError(
+                OffsetDateTime.now(),
+                currentTraceId(),
+                "BAD_REQUEST",
+                "Malformed request body."
+        );
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
     }
 
