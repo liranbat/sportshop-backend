@@ -19,6 +19,7 @@ public interface UserRepository extends JpaRepository<UserEntity, Long>,
 
     boolean existsByEmail(String email);
 
+    // deleted=false guard skipped when the actor is an admin -- admins can edit soft-deleted users
     @Modifying
     @Query("""
             UPDATE UserEntity u
@@ -27,15 +28,16 @@ public interface UserRepository extends JpaRepository<UserEntity, Long>,
                    u.phone     = :phone,
                    u.updatedAt = :now,
                    u.updatedBy = :actorId
-             WHERE u.id      = :userId
-               AND u.deleted = false
+             WHERE u.id = :userId
+               AND (:actorIsAdmin = true OR u.deleted = false)
             """)
     int applyProfileEdit(@Param("userId") Long userId,
                          @Param("firstName") String firstName,
                          @Param("lastName") String lastName,
                          @Param("phone") String phone,
                          @Param("actorId") Long actorId,
-                         @Param("now") OffsetDateTime now);
+                         @Param("now") OffsetDateTime now,
+                         @Param("actorIsAdmin") boolean actorIsAdmin);
 
     @Modifying
     @Query("""

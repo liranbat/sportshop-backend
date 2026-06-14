@@ -4,6 +4,7 @@ import com.java.sadna.backend.sportshop.api.generated.authusers.model.ChangePass
 import com.java.sadna.backend.sportshop.api.generated.authusers.model.UpdateProfileRequest;
 import com.java.sadna.backend.sportshop.entity.UserEntity;
 import com.java.sadna.backend.sportshop.exception.ConflictException;
+import com.java.sadna.backend.sportshop.exception.NotFoundException;
 import com.java.sadna.backend.sportshop.exception.UnauthorizedException;
 import com.java.sadna.backend.sportshop.mapper.UserEntityToUserDtoMapper;
 import com.java.sadna.backend.sportshop.model.PagedResult;
@@ -26,6 +27,7 @@ import java.time.OffsetDateTime;
 public class UserService {
 
     private static final String USER_NOT_ACTIVE_MESSAGE = "User does not exist or is not active.";
+    private static final String USER_NOT_FOUND_MESSAGE = "User not found.";
     private static final String CURRENT_PASSWORD_INCORRECT_MESSAGE = "Current password is incorrect.";
     private static final String CONCURRENT_MODIFICATION_MESSAGE =
             "Your account was modified elsewhere. Please refresh and try again.";
@@ -66,21 +68,27 @@ public class UserService {
     }
 
     @Transactional
-    public UserDto updateProfile(Long userId, UpdateProfileRequest dto) {
+    public UserDto updateProfile(Long targetUserId, Long actorUserId, boolean actorIsAdmin, UpdateProfileRequest dto) {
         int updated = userRepository.applyProfileEdit(
-                userId,
+                targetUserId,
                 dto.getFirstName(),
                 dto.getLastName(),
                 dto.getPhone(),
-                userId,
-                OffsetDateTime.now()
+                actorUserId,
+                OffsetDateTime.now(),
+                actorIsAdmin
         );
 
         if (updated == 0) {
+            if (actorIsAdmin) {
+                throw new NotFoundException(USER_NOT_FOUND_MESSAGE);
+            }
             throw new UnauthorizedException(USER_NOT_ACTIVE_MESSAGE);
         }
 
-        UserEntity fresh = loadActiveOrThrow(userId);
+        UserEntity fresh = actorIsAdmin
+                ? loadByIdOrThrow(targetUserId)
+                : loadActiveOrThrow(targetUserId);
         return userEntityToUserDtoMapper.map(fresh);
     }
 
@@ -134,6 +142,11 @@ public class UserService {
     }
 
     @Transactional(readOnly = true)
+    public UserDto getUserByIdAsAdmin(Long targetUserId) {
+        return userEntityToUserDtoMapper.map(loadByIdOrThrow(targetUserId));
+    }
+
+    @Transactional(readOnly = true)
     public PagedResult<UserDto> listUsers(Boolean isAdmin,
                                           Boolean isDeleted,
                                           String q,
@@ -158,6 +171,11 @@ public class UserService {
     private UserEntity loadActiveOrThrow(Long userId) {
         return userRepository.findByIdAndDeletedFalse(userId)
                 .orElseThrow(() -> new UnauthorizedException(USER_NOT_ACTIVE_MESSAGE));
+    }
+
+    private UserEntity loadByIdOrThrow(Long userId) {
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new NotFoundException(USER_NOT_FOUND_MESSAGE));
     }
 
     private void attachClearedCookies(HttpServletResponse response) {

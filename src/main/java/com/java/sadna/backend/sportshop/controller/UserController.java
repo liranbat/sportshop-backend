@@ -48,7 +48,9 @@ public class UserController implements UsersApi, AdminUsersApi {
     public ResponseEntity<UserResponse> updateProfile(UpdateProfileRequest updateProfileRequest) {
         Long userId = SecurityContextUtils.currentUserIdOrThrow();
         return ResponseEntity.ok(
-                userDtoToUserResponseMapper.map(userService.updateProfile(userId, updateProfileRequest))
+                userDtoToUserResponseMapper.map(
+                        userService.updateProfile(userId, userId, false, updateProfileRequest)
+                )
         );
     }
 
@@ -93,6 +95,25 @@ public class UserController implements UsersApi, AdminUsersApi {
                 isAdmin, isDeleted, q, sortField, sortDirection, page, pageSize
         );
         return ResponseEntity.ok(pagedUserDtoToUserListPageMapper.map(result));
+    }
+
+    @Override
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<UserResponse> getAdminUserById(Long id) {
+        return ResponseEntity.ok(
+                userDtoToUserResponseMapper.map(userService.getUserByIdAsAdmin(id))
+        );
+    }
+
+    @Override
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<UserResponse> updateAdminUser(Long id, UpdateProfileRequest updateProfileRequest) {
+        Long actorId = SecurityContextUtils.currentUserIdOrThrow();
+        return ResponseEntity.ok(
+                userDtoToUserResponseMapper.map(
+                        userService.updateProfile(id, actorId, true, updateProfileRequest)
+                )
+        );
     }
 
     private static Boolean toIsAdmin(UserRoleFilter role) {
