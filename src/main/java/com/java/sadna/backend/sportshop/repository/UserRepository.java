@@ -41,7 +41,8 @@ public interface UserRepository extends JpaRepository<UserEntity, Long>,
                          @Param("now") OffsetDateTime now,
                          @Param("actorIsAdmin") boolean actorIsAdmin);
 
-    @Modifying
+    // clearAutomatically = true: changePassword pre-loads this row for the password check, so without it any future post-update read would return the stale cached copy.
+    @Modifying(clearAutomatically = true)
     @Query("""
             UPDATE UserEntity u
                SET u.passwordHash = :newHash,
@@ -58,7 +59,8 @@ public interface UserRepository extends JpaRepository<UserEntity, Long>,
                        @Param("now") OffsetDateTime now);
 
     // last-admin guard: the only remaining active admin can't self-delete
-    @Modifying
+    // clearAutomatically = true: deleteAccount pre-loads this row for the password + last-admin checks, so without it any future post-update read would return the stale cached copy.
+    @Modifying(clearAutomatically = true)
     @Query("""
             UPDATE UserEntity u
                SET u.deleted   = true,
@@ -106,4 +108,39 @@ public interface UserRepository extends JpaRepository<UserEntity, Long>,
     int applyDemote(@Param("userId") Long userId,
                     @Param("actorId") Long actorId,
                     @Param("now") OffsetDateTime now);
+
+    // last-admin guard mirrors applyDemote: an admin (self or another) cannot be
+    // soft-deleted if doing so would leave the system with zero active admins.
+    // clearAutomatically = true: the service pre-loads this row for the pre-check, so without it the post-update reload would return the stale cached copy (deleted = false) instead of fresh DB data.
+    @Modifying(clearAutomatically = true)
+    @Query("""
+            UPDATE UserEntity u
+               SET u.deleted   = true,
+                   u.deletedAt = :now,
+                   u.deletedBy = :actorId,
+                   u.updatedAt = :now,
+                   u.updatedBy = :actorId
+             WHERE u.id        = :userId
+               AND u.deleted   = false
+               AND (u.admin = false
+                    OR (SELECT COUNT(a) FROM UserEntity a WHERE a.admin = true AND a.deleted = false) > 1)
+            """)
+    int applyAdminSoftDelete(@Param("userId") Long userId,
+                             @Param("actorId") Long actorId,
+                             @Param("now") OffsetDateTime now);
+
+    @Modifying
+    @Query("""
+            UPDATE UserEntity u
+               SET u.deleted   = false,
+                   u.deletedAt = null,
+                   u.deletedBy = null,
+                   u.updatedAt = :now,
+                   u.updatedBy = :actorId
+             WHERE u.id        = :userId
+               AND u.deleted   = true
+            """)
+    int applyAdminRestore(@Param("userId") Long userId,
+                          @Param("actorId") Long actorId,
+                          @Param("now") OffsetDateTime now);
 }

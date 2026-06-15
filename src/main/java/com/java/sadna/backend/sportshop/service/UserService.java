@@ -36,6 +36,12 @@ public class UserService {
             "User is not an admin, has been deleted, or is the last remaining admin.";
     private static final String DELETE_ACCOUNT_CONFLICT_MESSAGE =
             "Account cannot be deleted at the moment. Please refresh and try again.";
+    private static final String ADMIN_SOFT_DELETE_CONFLICT_MESSAGE =
+            "User has already been deleted, does not exist, or is the last remaining admin.";
+    private static final String ADMIN_LAST_ADMIN_DELETE_MESSAGE =
+            "Cannot delete the last remaining admin. Promote another user first.";
+    private static final String ADMIN_RESTORE_CONFLICT_MESSAGE =
+            "This user is no longer deleted — another admin already restored them.";
 
     private static final String SORT_FIELD_NAME = "name";
     private static final String SORT_FIELD_EMAIL = "email";
@@ -168,6 +174,37 @@ public class UserService {
         int updated = userRepository.applyDemote(targetUserId, actorUserId, OffsetDateTime.now());
         if (updated == 0) {
             throw new ConflictException(DEMOTE_CONFLICT_MESSAGE);
+        }
+        return userEntityToUserDtoMapper.map(loadByIdOrThrow(targetUserId));
+    }
+
+    @Transactional
+    public UserDto softDeleteAsAdmin(Long targetUserId, Long actorUserId) {
+        UserEntity entity = loadByIdOrThrow(targetUserId);
+        if (entity.isAdmin() && !entity.isDeleted()
+                && userRepository.countByAdminTrueAndDeletedFalse() <= 1) {
+            throw new ConflictException(ADMIN_LAST_ADMIN_DELETE_MESSAGE);
+        }
+
+        int updated = userRepository.applyAdminSoftDelete(
+                targetUserId, actorUserId, OffsetDateTime.now()
+        );
+        if (updated == 0) {
+            throw new ConflictException(ADMIN_SOFT_DELETE_CONFLICT_MESSAGE);
+        }
+        // refresh tokens dropped in-txn so the target's in-flight refreshes 401
+        // immediately; cart cleanup is fire-and-forget at the controller (cleanupDeletedUser)
+        refreshTokenRepository.deleteByUserId(targetUserId);
+        return userEntityToUserDtoMapper.map(loadByIdOrThrow(targetUserId));
+    }
+
+    @Transactional
+    public UserDto restoreAsAdmin(Long targetUserId, Long actorUserId) {
+        int updated = userRepository.applyAdminRestore(
+                targetUserId, actorUserId, OffsetDateTime.now()
+        );
+        if (updated == 0) {
+            throw new ConflictException(ADMIN_RESTORE_CONFLICT_MESSAGE);
         }
         return userEntityToUserDtoMapper.map(loadByIdOrThrow(targetUserId));
     }

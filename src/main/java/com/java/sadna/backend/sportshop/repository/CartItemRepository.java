@@ -22,7 +22,8 @@ public interface CartItemRepository extends JpaRepository<CartItemEntity, CartIt
     // holding the proposed-insert row) to fold the new quantity into the existing one, and
     // re-reads stock so the increment only fires when new_total <= cap. 0 rows = guard
     // rejected (stock dropped under us, two tabs raced, etc.). No partial add.
-    @Modifying
+    // clearAutomatically = true: addItem pre-loads product / stock / cart_item for stock pre-validation, so without it any future post-upsert read would return the stale cached copies.
+    @Modifying(clearAutomatically = true)
     @Query(value = """
             INSERT INTO cart_items (user_id, product_id, size, quantity, product_version)
             SELECT :userId, :productId, :size, :requestedQty, p.version
