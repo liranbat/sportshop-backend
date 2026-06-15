@@ -7,12 +7,18 @@ import com.java.sadna.backend.sportshop.entity.RefreshTokenEntity;
 import com.java.sadna.backend.sportshop.entity.UserEntity;
 import com.java.sadna.backend.sportshop.exception.ConflictException;
 import com.java.sadna.backend.sportshop.exception.UnauthorizedException;
+import com.java.sadna.backend.sportshop.mapper.RefreshTokenEntityToSessionDtoMapper;
 import com.java.sadna.backend.sportshop.mapper.UserEntityToUserDtoMapper;
+import com.java.sadna.backend.sportshop.model.PagedResult;
+import com.java.sadna.backend.sportshop.model.SessionDto;
 import com.java.sadna.backend.sportshop.model.UserDto;
 import com.java.sadna.backend.sportshop.repository.RefreshTokenRepository;
 import com.java.sadna.backend.sportshop.repository.UserRepository;
+import com.java.sadna.backend.sportshop.repository.specification.SessionSpecifications;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -30,6 +36,18 @@ public class AuthService {
     private static final String INVALID_CREDENTIALS_MESSAGE = "Invalid email or password.";
     private static final String INVALID_REFRESH_MESSAGE = "Refresh token is invalid or expired.";
     private static final String EMAIL_TAKEN_MESSAGE = "An account with this email already exists.";
+    private static final String REVOKE_CONFLICT_MESSAGE =
+            "This session has already been revoked by someone else.";
+
+    private static final String SORT_FIELD_USER = "user";
+    private static final String SORT_FIELD_EXPIRES_AT = "expiresAt";
+    private static final String SORT_PATH_ID = "id";
+    private static final String SORT_PATH_EXPIRES_AT = "expiresAt";
+    private static final String SORT_PATH_USER_EMAIL = "user.email";
+    private static final String SORT_DIRECTION_ASC = "asc";
+    private static final String SORT_DIRECTION_DESC = "desc";
+
+    private static final int DEFAULT_SESSION_PAGE_SIZE = 20;
 
     // 32 bytes = 256 bits of entropy -- far beyond what's practical to guess
     // even with the unbounded validity window between issuance and rotation.
@@ -41,7 +59,9 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final CookieService cookieService;
+    private final PaginationService paginationService;
     private final UserEntityToUserDtoMapper userEntityToUserDtoMapper;
+    private final RefreshTokenEntityToSessionDtoMapper refreshTokenEntityToSessionDtoMapper;
     private final Duration refreshTokenTtl;
 
     public AuthService(UserRepository userRepository,
@@ -49,14 +69,18 @@ public class AuthService {
                        PasswordEncoder passwordEncoder,
                        JwtService jwtService,
                        CookieService cookieService,
+                       PaginationService paginationService,
                        UserEntityToUserDtoMapper userEntityToUserDtoMapper,
+                       RefreshTokenEntityToSessionDtoMapper refreshTokenEntityToSessionDtoMapper,
                        AppProperties appProperties) {
         this.userRepository = userRepository;
         this.refreshTokenRepository = refreshTokenRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
         this.cookieService = cookieService;
+        this.paginationService = paginationService;
         this.userEntityToUserDtoMapper = userEntityToUserDtoMapper;
+        this.refreshTokenEntityToSessionDtoMapper = refreshTokenEntityToSessionDtoMapper;
         this.refreshTokenTtl = appProperties.getAuth().getRefreshTokenTtl();
     }
 
@@ -132,6 +156,35 @@ public class AuthService {
         return userEntityToUserDtoMapper.map(entity);
     }
 
+    @Transactional(readOnly = true)
+    public PagedResult<SessionDto> listSessions(String q,
+                                                String sortField,
+                                                String sortDirection,
+                                                Integer page,
+                                                Integer pageSize) {
+        Specification<RefreshTokenEntity> spec = Specification.allOf(
+                SessionSpecifications.searchMatches(q)
+        );
+        Sort sort = buildSessionSort(sortField, sortDirection);
+        return paginationService.paginate(
+                refreshTokenRepository, spec, sort, page, pageSize, DEFAULT_SESSION_PAGE_SIZE,
+                refreshTokenEntityToSessionDtoMapper
+        );
+    }
+
+    @Transactional
+    public void revokeSession(Long sessionId, Long actorId) {
+        int deleted = refreshTokenRepository.deleteByIdExcludingActor(sessionId, actorId);
+        if (deleted == 0) {
+            throw new ConflictException(REVOKE_CONFLICT_MESSAGE);
+        }
+    }
+
+    @Transactional
+    public int revokeAllSessionsExceptActor(Long actorId) {
+        return refreshTokenRepository.deleteAllExceptActor(actorId);
+    }
+
     private void issueSession(UserEntity entity, HttpServletResponse response) {
         String refreshToken = generateRefreshTokenValue();
         OffsetDateTime expiresAt = OffsetDateTime.now().plus(refreshTokenTtl);
@@ -170,5 +223,25 @@ public class AuthService {
 
     private static String normalizeEmail(String raw) {
         return raw == null ? null : raw.trim().toLowerCase();
+    }
+
+    private Sort buildSessionSort(String sortField, String sortDirection) {
+        if (sortField == null || sortField.isBlank() || SORT_FIELD_EXPIRES_AT.equalsIgnoreCase(sortField)) {
+            Sort.Direction dir = sessionDirectionFor(sortDirection, Sort.Direction.DESC);
+            return Sort.by(new Sort.Order(dir, SORT_PATH_EXPIRES_AT), Sort.Order.asc(SORT_PATH_ID));
+        }
+        if (SORT_FIELD_USER.equalsIgnoreCase(sortField)) {
+            Sort.Direction dir = sessionDirectionFor(sortDirection, Sort.Direction.ASC);
+            return Sort.by(new Sort.Order(dir, SORT_PATH_USER_EMAIL), Sort.Order.asc(SORT_PATH_ID));
+        }
+        Sort.Direction dir = sessionDirectionFor(sortDirection, Sort.Direction.DESC);
+        return Sort.by(new Sort.Order(dir, SORT_PATH_EXPIRES_AT), Sort.Order.asc(SORT_PATH_ID));
+    }
+
+    private Sort.Direction sessionDirectionFor(String sortDirection, Sort.Direction fieldDefault) {
+        if (sortDirection == null || sortDirection.isBlank()) return fieldDefault;
+        if (SORT_DIRECTION_ASC.equalsIgnoreCase(sortDirection)) return Sort.Direction.ASC;
+        if (SORT_DIRECTION_DESC.equalsIgnoreCase(sortDirection)) return Sort.Direction.DESC;
+        return fieldDefault;
     }
 }

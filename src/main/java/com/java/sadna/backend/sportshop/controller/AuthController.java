@@ -1,10 +1,17 @@
 package com.java.sadna.backend.sportshop.controller;
 
+import com.java.sadna.backend.sportshop.api.generated.authusers.api.AdminSessionsApi;
 import com.java.sadna.backend.sportshop.api.generated.authusers.api.AuthApi;
 import com.java.sadna.backend.sportshop.api.generated.authusers.model.LoginRequest;
 import com.java.sadna.backend.sportshop.api.generated.authusers.model.RegisterRequest;
+import com.java.sadna.backend.sportshop.api.generated.authusers.model.SessionListPage;
+import com.java.sadna.backend.sportshop.api.generated.authusers.model.SessionRevokeAllResponse;
 import com.java.sadna.backend.sportshop.api.generated.authusers.model.UserResponse;
+import com.java.sadna.backend.sportshop.exception.BadRequestException;
+import com.java.sadna.backend.sportshop.mapper.PagedSessionDtoToSessionListPageMapper;
 import com.java.sadna.backend.sportshop.mapper.UserDtoToUserResponseMapper;
+import com.java.sadna.backend.sportshop.model.PagedResult;
+import com.java.sadna.backend.sportshop.model.SessionDto;
 import com.java.sadna.backend.sportshop.security.SecurityContextUtils;
 import com.java.sadna.backend.sportshop.service.AuthService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -15,11 +22,14 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-public class AuthController implements AuthApi {
+public class AuthController implements AuthApi, AdminSessionsApi {
+
+    private static final String SCOPE_OTHERS = "others";
 
     private final AuthService authService;
     private final UserDtoToUserResponseMapper userDtoToUserResponseMapper;
-    
+    private final PagedSessionDtoToSessionListPageMapper pagedSessionDtoToSessionListPageMapper;
+
     // Spring injects request-scoped proxies, so even though this controller is a singleton,
     // each call reads/writes the cookies of its own HTTP request.
     private final HttpServletRequest httpServletRequest;
@@ -27,10 +37,12 @@ public class AuthController implements AuthApi {
 
     public AuthController(AuthService authService,
                           UserDtoToUserResponseMapper userDtoToUserResponseMapper,
+                          PagedSessionDtoToSessionListPageMapper pagedSessionDtoToSessionListPageMapper,
                           HttpServletRequest httpServletRequest,
                           HttpServletResponse httpServletResponse) {
         this.authService = authService;
         this.userDtoToUserResponseMapper = userDtoToUserResponseMapper;
+        this.pagedSessionDtoToSessionListPageMapper = pagedSessionDtoToSessionListPageMapper;
         this.httpServletRequest = httpServletRequest;
         this.httpServletResponse = httpServletResponse;
     }
@@ -73,5 +85,37 @@ public class AuthController implements AuthApi {
         // populated the SecurityContext with a non-Long principal.
         Long userId = SecurityContextUtils.currentUserIdOrThrow();
         return ResponseEntity.ok(userDtoToUserResponseMapper.map(authService.getMe(userId)));
+    }
+
+    @Override
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<SessionListPage> listAdminSessions(String q,
+                                                             String sortField,
+                                                             String sortDirection,
+                                                             Integer page,
+                                                             Integer pageSize) {
+        PagedResult<SessionDto> result = authService.listSessions(
+                q, sortField, sortDirection, page, pageSize
+        );
+        return ResponseEntity.ok(pagedSessionDtoToSessionListPageMapper.map(result));
+    }
+
+    @Override
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> revokeAdminSession(Long sessionId) {
+        Long actorId = SecurityContextUtils.currentUserIdOrThrow();
+        authService.revokeSession(sessionId, actorId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @Override
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<SessionRevokeAllResponse> revokeAllAdminSessions(String scope) {
+        if (!SCOPE_OTHERS.equals(scope)) {
+            throw new BadRequestException("scope must be 'others'.");
+        }
+        Long actorId = SecurityContextUtils.currentUserIdOrThrow();
+        int affected = authService.revokeAllSessionsExceptActor(actorId);
+        return ResponseEntity.ok(new SessionRevokeAllResponse(affected));
     }
 }
