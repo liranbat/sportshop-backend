@@ -4,7 +4,7 @@ import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.List;
 
-public class OrderDetailDto {
+public class OrderDetailDto implements BaseDto {
 
     private final String orderNumber;
     private final String status;

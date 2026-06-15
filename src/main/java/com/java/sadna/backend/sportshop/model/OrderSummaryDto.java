@@ -3,7 +3,7 @@ package com.java.sadna.backend.sportshop.model;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 
-public class OrderSummaryDto {
+public class OrderSummaryDto implements BaseDto {
 
     private final String orderNumber;
     private final String status;

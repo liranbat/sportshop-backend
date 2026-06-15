@@ -1,6 +1,6 @@
 package com.java.sadna.backend.sportshop.model;
 
-public class ShippingDetailsDto {
+public class ShippingDetailsDto implements BaseDto {
 
     private final String fullName;
     private final String email;
