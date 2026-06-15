@@ -1,6 +1,6 @@
 package com.java.sadna.backend.sportshop.model;
 
-public class PaymentDetailsDto {
+public class PaymentDetailsDto implements BaseDto {
 
     private final String cardNumber;
     private final String expiry;

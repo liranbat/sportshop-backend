@@ -2,7 +2,7 @@ package com.java.sadna.backend.sportshop.model;
 
 import java.math.BigDecimal;
 
-public class OrderItemDto {
+public class OrderItemDto implements BaseDto {
 
     private final Long productId;
     private final String productName;

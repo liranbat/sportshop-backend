@@ -15,7 +15,8 @@ public class UserEntityToUserDtoMapper implements BaseMapper<UserEntity, UserDto
                 userEntity.getLastName(),
                 userEntity.getEmail(),
                 userEntity.getPhone(),
-                userEntity.isAdmin()
+                userEntity.isAdmin(),
+                userEntity.isDeleted()
         );
     }
 }

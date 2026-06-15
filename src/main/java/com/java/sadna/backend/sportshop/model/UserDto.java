@@ -8,14 +8,16 @@ public class UserDto implements BaseDto {
     private final String email;
     private final String phone;
     private final boolean admin;
+    private final boolean deleted;
 
-    public UserDto(Long id, String firstName, String lastName, String email, String phone, boolean admin) {
+    public UserDto(Long id, String firstName, String lastName, String email, String phone, boolean admin, boolean deleted) {
         this.id = id;
         this.firstName = firstName;
         this.lastName = lastName;
         this.email = email;
         this.phone = phone;
         this.admin = admin;
+        this.deleted = deleted;
     }
 
     public Long getId() {
@@ -40,5 +42,9 @@ public class UserDto implements BaseDto {
 
     public boolean isAdmin() {
         return admin;
+    }
+
+    public boolean isDeleted() {
+        return deleted;
     }
 }

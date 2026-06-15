@@ -1,6 +1,6 @@
 package com.java.sadna.backend.sportshop.model;
 
-public class CheckoutRequestDto {
+public class CheckoutRequestDto implements BaseDto {
 
     private final ShippingDetailsDto shipping;
     private final PaymentDetailsDto payment;
