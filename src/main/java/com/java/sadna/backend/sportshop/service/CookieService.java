@@ -13,8 +13,8 @@ import java.util.Optional;
 @Service
 public class CookieService {
 
-    public static final String ACCESS_COOKIE_NAME = "access_token";
-    public static final String REFRESH_COOKIE_NAME = "refresh_token";
+    public static final String ACCESS_COOKIE_NAME = "sportshop_access_token";
+    public static final String REFRESH_COOKIE_NAME = "sportshop_refresh_token";
 
     private static final String ACCESS_COOKIE_PATH = "/";
     // Scoped narrowly so the browser only attaches the refresh token to /auth/refresh;

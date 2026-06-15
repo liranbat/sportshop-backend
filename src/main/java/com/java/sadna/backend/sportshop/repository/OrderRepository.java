@@ -44,7 +44,8 @@ public interface OrderRepository extends JpaRepository<OrderEntity, Long>,
 
     Optional<OrderEntity> findByOrderNumberAndUserId(String orderNumber, Long userId);
 
-    @Modifying
+    // clearAutomatically = true: cancelForUser pre-loads this row for the status pre-check, so without it any future post-update read of order.status / cancelled_at would return the stale cached copy.
+    @Modifying(clearAutomatically = true)
     @Query(value = """
             UPDATE orders
                SET status       = 'CANCELLED_BY_USER',

@@ -2,7 +2,7 @@ package com.java.sadna.backend.sportshop.model;
 
 import java.math.BigDecimal;
 
-public class CartViewRowDto {
+public class CartViewRowDto implements BaseDto {
 
     private final Long productId;
     private final String size;

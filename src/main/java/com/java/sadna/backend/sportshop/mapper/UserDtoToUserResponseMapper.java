@@ -15,7 +15,8 @@ public class UserDtoToUserResponseMapper implements BaseMapper<UserDto, UserResp
                 user.getLastName(),
                 user.getEmail(),
                 user.getPhone(),
-                user.isAdmin()
+                user.isAdmin(),
+                user.isDeleted()
         );
     }
 }
