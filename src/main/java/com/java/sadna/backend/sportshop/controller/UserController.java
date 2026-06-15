@@ -12,6 +12,7 @@ import com.java.sadna.backend.sportshop.mapper.PagedUserDtoToUserListPageMapper;
 import com.java.sadna.backend.sportshop.mapper.UserDtoToUserResponseMapper;
 import com.java.sadna.backend.sportshop.model.PagedResult;
 import com.java.sadna.backend.sportshop.model.UserDto;
+import com.java.sadna.backend.sportshop.security.JwtCookieAuthenticationFilter;
 import com.java.sadna.backend.sportshop.security.SecurityContextUtils;
 import com.java.sadna.backend.sportshop.service.UserService;
 import jakarta.servlet.http.HttpServletResponse;
@@ -114,6 +115,31 @@ public class UserController implements UsersApi, AdminUsersApi {
                         userService.updateProfile(id, actorId, true, updateProfileRequest)
                 )
         );
+    }
+
+    @Override
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<UserResponse> promoteAdminUser(Long id) {
+        Long actorId = SecurityContextUtils.currentUserIdOrThrow();
+        return ResponseEntity.ok(
+                userDtoToUserResponseMapper.map(userService.promoteToAdmin(id, actorId))
+        );
+    }
+
+    @Override
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<UserResponse> demoteAdminUser(Long id) {
+        Long actorId = SecurityContextUtils.currentUserIdOrThrow();
+        UserDto updated = userService.demoteFromAdmin(id, actorId);
+        // self-demote: filter set X-Auth-Role: admin pre-update, override so the
+        // frontend's auth-interceptor flips me.isAdmin on this very response
+        if (id.equals(actorId)) {
+            httpServletResponse.setHeader(
+                    JwtCookieAuthenticationFilter.ROLE_HEADER,
+                    JwtCookieAuthenticationFilter.ROLE_USER_VALUE
+            );
+        }
+        return ResponseEntity.ok(userDtoToUserResponseMapper.map(updated));
     }
 
     private static Boolean toIsAdmin(UserRoleFilter role) {

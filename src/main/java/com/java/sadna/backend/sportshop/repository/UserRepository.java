@@ -19,6 +19,8 @@ public interface UserRepository extends JpaRepository<UserEntity, Long>,
 
     boolean existsByEmail(String email);
 
+    long countByAdminTrueAndDeletedFalse();
+
     // deleted=false guard skipped when the actor is an admin -- admins can edit soft-deleted users
     @Modifying
     @Query("""
@@ -55,6 +57,7 @@ public interface UserRepository extends JpaRepository<UserEntity, Long>,
                        @Param("actorId") Long actorId,
                        @Param("now") OffsetDateTime now);
 
+    // last-admin guard: the only remaining active admin can't self-delete
     @Modifying
     @Query("""
             UPDATE UserEntity u
@@ -66,8 +69,41 @@ public interface UserRepository extends JpaRepository<UserEntity, Long>,
              WHERE u.id           = :userId
                AND u.passwordHash = :expectedHash
                AND u.deleted      = false
+               AND (u.admin = false
+                    OR (SELECT COUNT(a) FROM UserEntity a WHERE a.admin = true AND a.deleted = false) > 1)
             """)
     int softDelete(@Param("userId") Long userId,
                    @Param("expectedHash") String expectedHash,
                    @Param("now") OffsetDateTime now);
+
+    @Modifying
+    @Query("""
+            UPDATE UserEntity u
+               SET u.admin     = true,
+                   u.updatedAt = :now,
+                   u.updatedBy = :actorId
+             WHERE u.id        = :userId
+               AND u.admin     = false
+               AND u.deleted   = false
+            """)
+    int applyPromote(@Param("userId") Long userId,
+                     @Param("actorId") Long actorId,
+                     @Param("now") OffsetDateTime now);
+
+    // count > 1 subquery is the atomic last-admin guard: the only remaining
+    // active admin cannot be demoted (would leave the system with zero admins)
+    @Modifying
+    @Query("""
+            UPDATE UserEntity u
+               SET u.admin     = false,
+                   u.updatedAt = :now,
+                   u.updatedBy = :actorId
+             WHERE u.id        = :userId
+               AND u.admin     = true
+               AND u.deleted   = false
+               AND (SELECT COUNT(a) FROM UserEntity a WHERE a.admin = true AND a.deleted = false) > 1
+            """)
+    int applyDemote(@Param("userId") Long userId,
+                    @Param("actorId") Long actorId,
+                    @Param("now") OffsetDateTime now);
 }

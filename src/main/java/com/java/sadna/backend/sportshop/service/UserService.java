@@ -31,6 +31,11 @@ public class UserService {
     private static final String CURRENT_PASSWORD_INCORRECT_MESSAGE = "Current password is incorrect.";
     private static final String CONCURRENT_MODIFICATION_MESSAGE =
             "Your account was modified elsewhere. Please refresh and try again.";
+    private static final String PROMOTE_CONFLICT_MESSAGE = "User is already an admin or has been deleted.";
+    private static final String DEMOTE_CONFLICT_MESSAGE =
+            "User is not an admin, has been deleted, or is the last remaining admin.";
+    private static final String DELETE_ACCOUNT_CONFLICT_MESSAGE =
+            "Account cannot be deleted at the moment. Please refresh and try again.";
 
     private static final String SORT_FIELD_NAME = "name";
     private static final String SORT_FIELD_EMAIL = "email";
@@ -118,6 +123,9 @@ public class UserService {
         if (!passwordEncoder.matches(currentPassword, entity.getPasswordHash())) {
             throw new UnauthorizedException(CURRENT_PASSWORD_INCORRECT_MESSAGE);
         }
+        if (entity.isAdmin() && userRepository.countByAdminTrueAndDeletedFalse() <= 1) {
+            throw new ConflictException(DELETE_ACCOUNT_CONFLICT_MESSAGE);
+        }
 
         int deleted = userRepository.softDelete(
                 userId,
@@ -126,7 +134,7 @@ public class UserService {
         );
 
         if (deleted == 0) {
-            throw new ConflictException(CONCURRENT_MODIFICATION_MESSAGE);
+            throw new ConflictException(DELETE_ACCOUNT_CONFLICT_MESSAGE);
         }
         // Order matters: drop refresh tokens first so any in-flight refresh on this
         // user 401s immediately; the row stays soft-deleted but the session is gone.
@@ -143,6 +151,24 @@ public class UserService {
 
     @Transactional(readOnly = true)
     public UserDto getUserByIdAsAdmin(Long targetUserId) {
+        return userEntityToUserDtoMapper.map(loadByIdOrThrow(targetUserId));
+    }
+
+    @Transactional
+    public UserDto promoteToAdmin(Long targetUserId, Long actorUserId) {
+        int updated = userRepository.applyPromote(targetUserId, actorUserId, OffsetDateTime.now());
+        if (updated == 0) {
+            throw new ConflictException(PROMOTE_CONFLICT_MESSAGE);
+        }
+        return userEntityToUserDtoMapper.map(loadByIdOrThrow(targetUserId));
+    }
+
+    @Transactional
+    public UserDto demoteFromAdmin(Long targetUserId, Long actorUserId) {
+        int updated = userRepository.applyDemote(targetUserId, actorUserId, OffsetDateTime.now());
+        if (updated == 0) {
+            throw new ConflictException(DEMOTE_CONFLICT_MESSAGE);
+        }
         return userEntityToUserDtoMapper.map(loadByIdOrThrow(targetUserId));
     }
 
