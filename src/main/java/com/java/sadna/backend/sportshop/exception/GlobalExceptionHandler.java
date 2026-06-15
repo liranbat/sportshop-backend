@@ -14,9 +14,12 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.validation.FieldError;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.ConstraintViolationException;
 
 import java.time.OffsetDateTime;
 import java.util.stream.Collectors;
@@ -85,6 +88,36 @@ public class GlobalExceptionHandler {
     private String formatFieldError(FieldError fe) {
         String defaultMessage = fe.getDefaultMessage();
         return fe.getField() + ": " + (defaultMessage != null ? defaultMessage : "invalid");
+    }
+
+    @ExceptionHandler(ConstraintViolationException.class)
+    public ResponseEntity<ApiError> handleConstraintViolation(ConstraintViolationException e) {
+        String message = e.getConstraintViolations().stream()
+                .map(this::formatConstraintViolation)
+                .collect(Collectors.joining("; "));
+        if (message.isEmpty()) {
+            message = "Request parameters failed validation.";
+        }
+        log.debug("Constraint violation: {}", message);
+        ApiError body = new ApiError(OffsetDateTime.now(), currentTraceId(), "BAD_REQUEST", message);
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
+    }
+
+    private String formatConstraintViolation(ConstraintViolation<?> v) {
+        // propertyPath looks like "revokeAdminSession.sessionId"; keep just the leaf param name.
+        String path = v.getPropertyPath().toString();
+        int dot = path.lastIndexOf('.');
+        String name = dot >= 0 ? path.substring(dot + 1) : path;
+        String defaultMessage = v.getMessage();
+        return name + ": " + (defaultMessage != null ? defaultMessage : "invalid");
+    }
+
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ResponseEntity<ApiError> handleMissingParam(MissingServletRequestParameterException e) {
+        log.debug("Missing required parameter [name={}]: {}", e.getParameterName(), e.getMessage());
+        String message = "Required parameter '" + e.getParameterName() + "' is missing.";
+        ApiError body = new ApiError(OffsetDateTime.now(), currentTraceId(), "BAD_REQUEST", message);
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
     }
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
