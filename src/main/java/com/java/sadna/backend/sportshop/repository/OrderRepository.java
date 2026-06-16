@@ -1,10 +1,14 @@
 package com.java.sadna.backend.sportshop.repository;
 
 import com.java.sadna.backend.sportshop.entity.OrderEntity;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.repository.query.Param;
 
 import java.math.BigDecimal;
@@ -12,6 +16,11 @@ import java.util.Optional;
 
 public interface OrderRepository extends JpaRepository<OrderEntity, Long>,
         JpaSpecificationExecutor<OrderEntity> {
+
+    // fetch user up front so the admin mapper's entity.getUser() doesn't fire N+1.
+    @Override
+    @EntityGraph(attributePaths = "user")
+    Page<OrderEntity> findAll(Specification<OrderEntity> spec, Pageable pageable);
 
     // ON CONFLICT DO NOTHING keeps the order-number retry loop inside the same transaction --
     // a unique-violation on a raw INSERT would abort the PG transaction outright.

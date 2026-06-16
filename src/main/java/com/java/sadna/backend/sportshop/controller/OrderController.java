@@ -1,5 +1,6 @@
 package com.java.sadna.backend.sportshop.controller;
 
+import com.java.sadna.backend.sportshop.api.generated.orders.api.AdminOrdersApi;
 import com.java.sadna.backend.sportshop.api.generated.orders.api.OrdersApi;
 import com.java.sadna.backend.sportshop.api.generated.orders.model.OrderDetail;
 import com.java.sadna.backend.sportshop.api.generated.orders.model.OrderListPage;
@@ -19,7 +20,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 
 @RestController
-public class OrderController implements OrdersApi {
+public class OrderController implements OrdersApi, AdminOrdersApi {
 
     private final OrderService orderService;
     private final PagedOrderSummaryDtoToOrderListPageMapper pagedOrderSummaryDtoToOrderListPageMapper;
@@ -46,10 +47,11 @@ public class OrderController implements OrdersApi {
                                                     Integer page,
                                                     Integer pageSize) {
         Long userId = SecurityContextUtils.currentUserIdOrThrow();
-        PagedResult<OrderSummaryDto> result = orderService.listForUser(
+        PagedResult<OrderSummaryDto> result = orderService.list(
                 userId,
                 status == null ? null : status.getValue(),
                 orderNumber,
+                null,
                 amountMin,
                 amountMax,
                 dateFrom,
@@ -76,5 +78,35 @@ public class OrderController implements OrdersApi {
         Long userId = SecurityContextUtils.currentUserIdOrThrow();
         orderService.cancelForUser(orderNumber, userId);
         return ResponseEntity.noContent().build();
+    }
+
+    @Override
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<OrderListPage> listAdminOrders(OrderStatus status,
+                                                         String orderNumber,
+                                                         String customer,
+                                                         BigDecimal amountMin,
+                                                         BigDecimal amountMax,
+                                                         LocalDate dateFrom,
+                                                         LocalDate dateTo,
+                                                         String sortField,
+                                                         String sortDirection,
+                                                         Integer page,
+                                                         Integer pageSize) {
+        PagedResult<OrderSummaryDto> result = orderService.list(
+                null,
+                status == null ? null : status.getValue(),
+                orderNumber,
+                customer,
+                amountMin,
+                amountMax,
+                dateFrom,
+                dateTo,
+                sortField,
+                sortDirection,
+                page,
+                pageSize
+        );
+        return ResponseEntity.ok(pagedOrderSummaryDtoToOrderListPageMapper.map(result));
     }
 }

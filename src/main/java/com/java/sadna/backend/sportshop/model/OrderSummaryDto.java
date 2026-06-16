@@ -10,17 +10,20 @@ public class OrderSummaryDto implements BaseDto {
     private final OffsetDateTime createdAt;
     private final int itemCount;
     private final BigDecimal totalPrice;
+    private final CustomerForOrderDto customer;
 
     public OrderSummaryDto(String orderNumber,
                            String status,
                            OffsetDateTime createdAt,
                            int itemCount,
-                           BigDecimal totalPrice) {
+                           BigDecimal totalPrice,
+                           CustomerForOrderDto customer) {
         this.orderNumber = orderNumber;
         this.status = status;
         this.createdAt = createdAt;
         this.itemCount = itemCount;
         this.totalPrice = totalPrice;
+        this.customer = customer;
     }
 
     public String getOrderNumber() {
@@ -41,5 +44,9 @@ public class OrderSummaryDto implements BaseDto {
 
     public BigDecimal getTotalPrice() {
         return totalPrice;
+    }
+
+    public CustomerForOrderDto getCustomer() {
+        return customer;
     }
 }

@@ -81,21 +81,23 @@ public class OrderService {
     }
 
     @Transactional(readOnly = true)
-    public PagedResult<OrderSummaryDto> listForUser(Long userId,
-                                                    String status,
-                                                    String orderNumberSearch,
-                                                    BigDecimal amountMin,
-                                                    BigDecimal amountMax,
-                                                    LocalDate dateFrom,
-                                                    LocalDate dateTo,
-                                                    String sortField,
-                                                    String sortDirection,
-                                                    Integer page,
-                                                    Integer pageSize) {
+    public PagedResult<OrderSummaryDto> list(Long userId,
+                                             String status,
+                                             String orderNumberSearch,
+                                             String customer,
+                                             BigDecimal amountMin,
+                                             BigDecimal amountMax,
+                                             LocalDate dateFrom,
+                                             LocalDate dateTo,
+                                             String sortField,
+                                             String sortDirection,
+                                             Integer page,
+                                             Integer pageSize) {
         Specification<OrderEntity> spec = Specification.allOf(
                 OrderSpecifications.userIdEquals(userId),
                 OrderSpecifications.statusEquals(status),
                 OrderSpecifications.orderNumberContainsIgnoreCase(orderNumberSearch),
+                OrderSpecifications.customerMatches(customer),
                 OrderSpecifications.totalPriceGte(amountMin),
                 OrderSpecifications.totalPriceLte(amountMax),
                 OrderSpecifications.createdAtGte(toUtcStartOfDay(dateFrom)),
