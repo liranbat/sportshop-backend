@@ -7,6 +7,12 @@ import org.springframework.stereotype.Component;
 @Component
 public class OrderEntityToOrderSummaryDtoMapper implements BaseMapper<OrderEntity, OrderSummaryDto> {
 
+    private final UserEntityToCustomerForOrderDtoMapper userEntityToCustomerForOrderDtoMapper;
+
+    public OrderEntityToOrderSummaryDtoMapper(UserEntityToCustomerForOrderDtoMapper userEntityToCustomerForOrderDtoMapper) {
+        this.userEntityToCustomerForOrderDtoMapper = userEntityToCustomerForOrderDtoMapper;
+    }
+
     @Override
     public OrderSummaryDto map(OrderEntity entity) {
         return new OrderSummaryDto(
@@ -14,7 +20,8 @@ public class OrderEntityToOrderSummaryDtoMapper implements BaseMapper<OrderEntit
                 entity.getStatus(),
                 entity.getCreatedAt(),
                 entity.getItemCount(),
-                entity.getTotalPrice()
+                entity.getTotalPrice(),
+                userEntityToCustomerForOrderDtoMapper.map(entity.getUser())
         );
     }
 }

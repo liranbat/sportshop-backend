@@ -1,3 +1,5 @@
+DROP TABLE IF EXISTS product_stock CASCADE;
+
 CREATE TABLE product_stock (
     product_id           BIGINT        NOT NULL REFERENCES products(id),
     size                 VARCHAR(20)   NOT NULL,
