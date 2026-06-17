@@ -68,7 +68,7 @@ public class OrderController implements OrdersApi, AdminOrdersApi {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<OrderDetail> getOrder(String orderNumber) {
         Long userId = SecurityContextUtils.currentUserIdOrThrow();
-        OrderDetailDto detail = orderService.getDetailForUser(orderNumber, userId);
+        OrderDetailDto detail = orderService.getDetail(orderNumber, userId);
         return ResponseEntity.ok(orderDetailDtoToOrderDetailMapper.map(detail));
     }
 
@@ -108,5 +108,12 @@ public class OrderController implements OrdersApi, AdminOrdersApi {
                 pageSize
         );
         return ResponseEntity.ok(pagedOrderSummaryDtoToOrderListPageMapper.map(result));
+    }
+
+    @Override
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<OrderDetail> getAdminOrder(String orderNumber) {
+        OrderDetailDto detail = orderService.getDetail(orderNumber, null);
+        return ResponseEntity.ok(orderDetailDtoToOrderDetailMapper.map(detail));
     }
 }

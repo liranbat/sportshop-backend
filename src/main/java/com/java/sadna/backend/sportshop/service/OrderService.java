@@ -8,6 +8,7 @@ import com.java.sadna.backend.sportshop.exception.NotFoundException;
 import com.java.sadna.backend.sportshop.mapper.OrderEntityToOrderSummaryDtoMapper;
 import com.java.sadna.backend.sportshop.mapper.OrderItemEntityToOrderItemDtoMapper;
 import com.java.sadna.backend.sportshop.mapper.PaymentEntityToOrderPaymentDtoMapper;
+import com.java.sadna.backend.sportshop.mapper.UserEntityToCustomerForOrderDtoMapper;
 import com.java.sadna.backend.sportshop.model.OrderDetailDto;
 import com.java.sadna.backend.sportshop.model.OrderItemDto;
 import com.java.sadna.backend.sportshop.model.OrderPaymentDto;
@@ -60,6 +61,7 @@ public class OrderService {
     private final OrderEntityToOrderSummaryDtoMapper orderEntityToOrderSummaryDtoMapper;
     private final OrderItemEntityToOrderItemDtoMapper orderItemEntityToOrderItemDtoMapper;
     private final PaymentEntityToOrderPaymentDtoMapper paymentEntityToOrderPaymentDtoMapper;
+    private final UserEntityToCustomerForOrderDtoMapper userEntityToCustomerForOrderDtoMapper;
     private final PaginationService paginationService;
 
     public OrderService(OrderRepository orderRepository,
@@ -69,6 +71,7 @@ public class OrderService {
                         OrderEntityToOrderSummaryDtoMapper orderEntityToOrderSummaryDtoMapper,
                         OrderItemEntityToOrderItemDtoMapper orderItemEntityToOrderItemDtoMapper,
                         PaymentEntityToOrderPaymentDtoMapper paymentEntityToOrderPaymentDtoMapper,
+                        UserEntityToCustomerForOrderDtoMapper userEntityToCustomerForOrderDtoMapper,
                         PaginationService paginationService) {
         this.orderRepository = orderRepository;
         this.orderItemRepository = orderItemRepository;
@@ -77,6 +80,7 @@ public class OrderService {
         this.orderEntityToOrderSummaryDtoMapper = orderEntityToOrderSummaryDtoMapper;
         this.orderItemEntityToOrderItemDtoMapper = orderItemEntityToOrderItemDtoMapper;
         this.paymentEntityToOrderPaymentDtoMapper = paymentEntityToOrderPaymentDtoMapper;
+        this.userEntityToCustomerForOrderDtoMapper = userEntityToCustomerForOrderDtoMapper;
         this.paginationService = paginationService;
     }
 
@@ -112,12 +116,20 @@ public class OrderService {
         );
     }
 
+    // userId == null -> admin context, no owner gate; 404 only when the order number doesn't exist.
+    // userId != null -> regular user; the finder's WHERE user_id = :userId clause proves the order
+    //   belongs to the caller. A row owned by someone else won't match and surfaces as the same
+    //   404 as a missing order, so we never leak whether the order exists for a different user.
     @Transactional(readOnly = true)
-    public OrderDetailDto getDetailForUser(String orderNumber, Long userId) {
-        // Owner gate: missing OR not-owned both surface as the same 404, no information leak.
-        OrderEntity order = orderRepository.findByOrderNumberAndUserId(orderNumber, userId)
+    public OrderDetailDto getDetail(String orderNumber, Long userId) {
+        OrderEntity order = (userId == null
+                ? orderRepository.findWithUserByOrderNumber(orderNumber)
+                : orderRepository.findWithUserByOrderNumberAndUserId(orderNumber, userId))
                 .orElseThrow(() -> new NotFoundException(MSG_ORDER_NOT_FOUND));
+        return buildDetailDto(order);
+    }
 
+    private OrderDetailDto buildDetailDto(OrderEntity order) {
         List<OrderItemDto> items = orderItemRepository.findByOrderIdOrderByIdAsc(order.getId()).stream()
                 .map(orderItemEntityToOrderItemDtoMapper::map)
                 .toList();
@@ -145,7 +157,8 @@ public class OrderService {
                 order.getItemCount(),
                 items,
                 shipping,
-                paymentDto
+                paymentDto,
+                userEntityToCustomerForOrderDtoMapper.map(order.getUser())
         );
     }
 

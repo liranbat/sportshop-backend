@@ -15,6 +15,7 @@ public class OrderDetailDto implements BaseDto {
     private final List<OrderItemDto> items;
     private final ShippingDetailsDto shipping;
     private final OrderPaymentDto payment;
+    private final CustomerForOrderDto customer;
 
     public OrderDetailDto(String orderNumber,
                           String status,
@@ -24,7 +25,8 @@ public class OrderDetailDto implements BaseDto {
                           int itemCount,
                           List<OrderItemDto> items,
                           ShippingDetailsDto shipping,
-                          OrderPaymentDto payment) {
+                          OrderPaymentDto payment,
+                          CustomerForOrderDto customer) {
         this.orderNumber = orderNumber;
         this.status = status;
         this.createdAt = createdAt;
@@ -34,6 +36,7 @@ public class OrderDetailDto implements BaseDto {
         this.items = items;
         this.shipping = shipping;
         this.payment = payment;
+        this.customer = customer;
     }
 
     public String getOrderNumber() {
@@ -70,5 +73,9 @@ public class OrderDetailDto implements BaseDto {
 
     public OrderPaymentDto getPayment() {
         return payment;
+    }
+
+    public CustomerForOrderDto getCustomer() {
+        return customer;
     }
 }

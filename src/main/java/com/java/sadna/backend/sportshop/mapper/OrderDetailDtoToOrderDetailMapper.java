@@ -15,11 +15,14 @@ public class OrderDetailDtoToOrderDetailMapper implements BaseMapper<OrderDetail
 
     private final OrderItemDtoToOrderItemMapper orderItemDtoToOrderItemMapper;
     private final OrderPaymentDtoToOrderPaymentMapper orderPaymentDtoToOrderPaymentMapper;
+    private final CustomerForOrderDtoToCustomerForOrderMapper customerForOrderDtoToCustomerForOrderMapper;
 
     public OrderDetailDtoToOrderDetailMapper(OrderItemDtoToOrderItemMapper orderItemDtoToOrderItemMapper,
-                                             OrderPaymentDtoToOrderPaymentMapper orderPaymentDtoToOrderPaymentMapper) {
+                                             OrderPaymentDtoToOrderPaymentMapper orderPaymentDtoToOrderPaymentMapper,
+                                             CustomerForOrderDtoToCustomerForOrderMapper customerForOrderDtoToCustomerForOrderMapper) {
         this.orderItemDtoToOrderItemMapper = orderItemDtoToOrderItemMapper;
         this.orderPaymentDtoToOrderPaymentMapper = orderPaymentDtoToOrderPaymentMapper;
+        this.customerForOrderDtoToCustomerForOrderMapper = customerForOrderDtoToCustomerForOrderMapper;
     }
 
     @Override
@@ -35,7 +38,8 @@ public class OrderDetailDtoToOrderDetailMapper implements BaseMapper<OrderDetail
                 source.getItemCount(),
                 items,
                 mapShipping(source.getShipping()),
-                orderPaymentDtoToOrderPaymentMapper.map(source.getPayment())
+                orderPaymentDtoToOrderPaymentMapper.map(source.getPayment()),
+                customerForOrderDtoToCustomerForOrderMapper.map(source.getCustomer())
         ).cancelledAt(source.getCancelledAt());
     }
 

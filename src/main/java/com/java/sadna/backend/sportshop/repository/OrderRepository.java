@@ -53,6 +53,13 @@ public interface OrderRepository extends JpaRepository<OrderEntity, Long>,
 
     Optional<OrderEntity> findByOrderNumberAndUserId(String orderNumber, Long userId);
 
+    // fetch user up front so the detail mapper's entity.getUser() doesn't fire a second query.
+    @EntityGraph(attributePaths = "user")
+    Optional<OrderEntity> findWithUserByOrderNumberAndUserId(String orderNumber, Long userId);
+
+    @EntityGraph(attributePaths = "user")
+    Optional<OrderEntity> findWithUserByOrderNumber(String orderNumber);
+
     // clearAutomatically = true: cancelForUser pre-loads this row for the status pre-check, so without it any future post-update read of order.status / cancelled_at would return the stale cached copy.
     @Modifying(clearAutomatically = true)
     @Query(value = """
