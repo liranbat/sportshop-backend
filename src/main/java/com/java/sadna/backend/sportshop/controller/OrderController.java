@@ -76,7 +76,7 @@ public class OrderController implements OrdersApi, AdminOrdersApi {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Void> cancelOrder(String orderNumber) {
         Long userId = SecurityContextUtils.currentUserIdOrThrow();
-        orderService.cancelForUser(orderNumber, userId);
+        orderService.cancel(orderNumber, userId, userId);
         return ResponseEntity.noContent().build();
     }
 
@@ -115,5 +115,13 @@ public class OrderController implements OrdersApi, AdminOrdersApi {
     public ResponseEntity<OrderDetail> getAdminOrder(String orderNumber) {
         OrderDetailDto detail = orderService.getDetail(orderNumber, null);
         return ResponseEntity.ok(orderDetailDtoToOrderDetailMapper.map(detail));
+    }
+
+    @Override
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> cancelAdminOrder(String orderNumber) {
+        Long adminId = SecurityContextUtils.currentUserIdOrThrow();
+        orderService.cancel(orderNumber, null, adminId);
+        return ResponseEntity.noContent().build();
     }
 }

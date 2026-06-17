@@ -60,19 +60,26 @@ public interface OrderRepository extends JpaRepository<OrderEntity, Long>,
     @EntityGraph(attributePaths = "user")
     Optional<OrderEntity> findWithUserByOrderNumber(String orderNumber);
 
-    // clearAutomatically = true: cancelForUser pre-loads this row for the status pre-check, so without it any future post-update read of order.status / cancelled_at would return the stale cached copy.
+    // User + admin share this UPDATE; the role-conditional status target and WHERE gates are
+    // inlined below. 0 rows means the caller lost the race against a concurrent status change.
+    // clearAutomatically = true: the service pre-loads this row for the status pre-check, so
+    // without it any post-update read of order.status / cancelled_at would return the stale
+    // cached copy.
     @Modifying(clearAutomatically = true)
     @Query(value = """
             UPDATE orders
-               SET status       = 'CANCELLED_BY_USER',
+               SET status       = CASE WHEN :isAdmin THEN 'CANCELLED_BY_ADMIN' ELSE 'CANCELLED_BY_USER' END,
                    cancelled_at = NOW(),
-                   cancelled_by = :userId,
+                   cancelled_by = :actorId,
                    updated_at   = NOW(),
-                   updated_by   = :userId
-             WHERE id      = :id
-               AND user_id = :userId
-               AND status  = 'PAID'
+                   updated_by   = :actorId
+             WHERE id = :id
+               AND (
+                       (    :isAdmin AND status IN ('PAID', 'SHIPPED', 'DELIVERED'))
+                    OR (NOT :isAdmin AND user_id = :actorId AND status = 'PAID')
+                   )
             """, nativeQuery = true)
-    int cancelOwnUserOrder(@Param("id") Long id,
-                           @Param("userId") Long userId);
+    int cancel(@Param("id") Long id,
+               @Param("isAdmin") boolean isAdmin,
+               @Param("actorId") Long actorId);
 }

@@ -33,6 +33,7 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Set;
 
 @Service
 public class OrderService {
@@ -48,6 +49,11 @@ public class OrderService {
     private static final int DEFAULT_PAGE_SIZE = 10;
 
     private static final String STATUS_PAID = "PAID";
+    private static final String STATUS_SHIPPED = "SHIPPED";
+    private static final String STATUS_DELIVERED = "DELIVERED";
+
+    private static final Set<String> ADMIN_CANCELLABLE_STATUSES =
+            Set.of(STATUS_PAID, STATUS_SHIPPED, STATUS_DELIVERED);
 
     private static final String MSG_ORDER_NOT_FOUND = "Order not found.";
     private static final String MSG_ORDER_CANNOT_BE_CANCELLED = "This order can no longer be cancelled.";
@@ -162,23 +168,32 @@ public class OrderService {
         );
     }
 
+    // userId == null -> admin path (no owner gate, broader status set); userId != null -> user
+    // path (owner gate, PAID-only). actorId is the acting caller (== userId for users) and
+    // lands on cancelled_by + updated_by.
     @Transactional
-    public void cancelForUser(String orderNumber, Long userId) {
-        log.info("Cancel started: userId={} orderNumber={}", userId, orderNumber);
+    public void cancel(String orderNumber, Long userId, Long actorId) {
+        boolean isAdmin = (userId == null);
+        log.info("Cancel started: actorId={} isAdmin={} orderNumber={}", actorId, isAdmin, orderNumber);
 
-        OrderEntity order = orderRepository.findByOrderNumberAndUserId(orderNumber, userId)
+        OrderEntity order = (isAdmin
+                ? orderRepository.findWithUserByOrderNumber(orderNumber)
+                : orderRepository.findByOrderNumberAndUserId(orderNumber, userId))
                 .orElseThrow(() -> new NotFoundException(MSG_ORDER_NOT_FOUND));
 
-        if (!STATUS_PAID.equals(order.getStatus())) {
-            log.warn("Cancel rejected: orderId={} userId={} currentStatus={}",
-                    order.getId(), userId, order.getStatus());
+        boolean cancellable = isAdmin
+                ? ADMIN_CANCELLABLE_STATUSES.contains(order.getStatus())
+                : STATUS_PAID.equals(order.getStatus());
+        if (!cancellable) {
+            log.warn("Cancel rejected: orderId={} actorId={} isAdmin={} currentStatus={}",
+                    order.getId(), actorId, isAdmin, order.getStatus());
             throw new ConflictException(MSG_ORDER_CANNOT_BE_CANCELLED);
         }
 
-        int orderAffected = orderRepository.cancelOwnUserOrder(order.getId(), userId);
+        int orderAffected = orderRepository.cancel(order.getId(), isAdmin, actorId);
         if (orderAffected == 0) {
-            log.warn("Cancel race: orderId={} userId={} -- order moved off PAID between pre-flight and write",
-                    order.getId(), userId);
+            log.warn("Cancel race: orderId={} actorId={} isAdmin={} -- order moved out of the cancellable set between pre-flight and write",
+                    order.getId(), actorId, isAdmin);
             throw new ConflictException(MSG_ORDER_CANNOT_BE_CANCELLED);
         }
 
@@ -198,14 +213,14 @@ public class OrderService {
             }
         }
 
-        int refunded = paymentRepository.refundIfSuccess(order.getId(), userId);
+        int refunded = paymentRepository.refundIfSuccess(order.getId(), actorId);
         if (refunded == 0) {
-            log.error("Payment refund invariant break: orderId={} userId={}", order.getId(), userId);
+            log.error("Payment refund invariant break: orderId={} actorId={}", order.getId(), actorId);
             throw new IllegalStateException(MSG_PAYMENT_REFUND_INVARIANT);
         }
 
-        log.info("Cancel completed: orderId={} userId={} orderNumber={}",
-                order.getId(), userId, orderNumber);
+        log.info("Cancel completed: orderId={} actorId={} isAdmin={} orderNumber={}",
+                order.getId(), actorId, isAdmin, orderNumber);
     }
 
     // Lower bound for dateFrom: 00:00:00Z of the same day, used with `>=`.
