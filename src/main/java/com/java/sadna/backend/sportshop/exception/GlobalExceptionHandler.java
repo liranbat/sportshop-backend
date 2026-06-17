@@ -12,6 +12,7 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.validation.FieldError;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
@@ -142,6 +143,20 @@ public class GlobalExceptionHandler {
             headers.setAllow(e.getSupportedHttpMethods());
         }
         return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED).headers(headers).body(body);
+    }
+
+    @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
+    public ResponseEntity<ApiError> handleMediaTypeNotSupported(HttpMediaTypeNotSupportedException e) {
+        log.debug("Unsupported media type [contentType={}]: {}", e.getContentType(), e.getMessage());
+        String message = e.getContentType() != null
+                ? "Content type '" + e.getContentType() + "' is not supported for this endpoint."
+                : "Request Content-Type is required.";
+        ApiError body = new ApiError(OffsetDateTime.now(), currentTraceId(), "UNSUPPORTED_MEDIA_TYPE", message);
+        HttpHeaders headers = new HttpHeaders();
+        if (!e.getSupportedMediaTypes().isEmpty()) {
+            headers.setAccept(e.getSupportedMediaTypes());
+        }
+        return ResponseEntity.status(HttpStatus.UNSUPPORTED_MEDIA_TYPE).headers(headers).body(body);
     }
 
     @ExceptionHandler(Exception.class)
