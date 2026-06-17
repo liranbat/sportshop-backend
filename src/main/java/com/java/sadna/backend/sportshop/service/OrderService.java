@@ -3,11 +3,13 @@ package com.java.sadna.backend.sportshop.service;
 import com.java.sadna.backend.sportshop.entity.OrderEntity;
 import com.java.sadna.backend.sportshop.entity.OrderItemEntity;
 import com.java.sadna.backend.sportshop.entity.PaymentEntity;
+import com.java.sadna.backend.sportshop.exception.BadRequestException;
 import com.java.sadna.backend.sportshop.exception.ConflictException;
 import com.java.sadna.backend.sportshop.exception.NotFoundException;
 import com.java.sadna.backend.sportshop.mapper.OrderEntityToOrderSummaryDtoMapper;
 import com.java.sadna.backend.sportshop.mapper.OrderItemEntityToOrderItemDtoMapper;
 import com.java.sadna.backend.sportshop.mapper.PaymentEntityToOrderPaymentDtoMapper;
+import com.java.sadna.backend.sportshop.mapper.UserEntityToCustomerForOrderDtoMapper;
 import com.java.sadna.backend.sportshop.model.OrderDetailDto;
 import com.java.sadna.backend.sportshop.model.OrderItemDto;
 import com.java.sadna.backend.sportshop.model.OrderPaymentDto;
@@ -19,6 +21,7 @@ import com.java.sadna.backend.sportshop.repository.OrderRepository;
 import com.java.sadna.backend.sportshop.repository.PaymentRepository;
 import com.java.sadna.backend.sportshop.repository.ProductStockRepository;
 import com.java.sadna.backend.sportshop.repository.specification.OrderSpecifications;
+import com.java.sadna.backend.sportshop.util.OrderStatusTransitions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Sort;
@@ -32,6 +35,7 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Set;
 
 @Service
 public class OrderService {
@@ -46,10 +50,23 @@ public class OrderService {
 
     private static final int DEFAULT_PAGE_SIZE = 10;
 
-    private static final String STATUS_PAID = "PAID";
+    private static final Set<String> ADMIN_CANCELLABLE_STATUSES = Set.of(
+            OrderStatusTransitions.STATUS_PAID,
+            OrderStatusTransitions.STATUS_SHIPPED,
+            OrderStatusTransitions.STATUS_DELIVERED);
+
+    private static final List<String> ADMIN_EDITABLE_SHIPPING_STATUSES = List.of(
+            OrderStatusTransitions.STATUS_PAID,
+            OrderStatusTransitions.STATUS_SHIPPED,
+            OrderStatusTransitions.STATUS_DELIVERED);
 
     private static final String MSG_ORDER_NOT_FOUND = "Order not found.";
     private static final String MSG_ORDER_CANNOT_BE_CANCELLED = "This order can no longer be cancelled.";
+    private static final String MSG_INVALID_STATUS_TRANSITION = "Invalid status transition: %s -> %s.";
+    private static final String MSG_ORDER_STATUS_CHANGED = "Order status changed since you opened the form.";
+    private static final String MSG_SHIPPING_NOT_EDITABLE =
+            "Shipping address can only be edited while the order is in "
+                    + String.join(", ", ADMIN_EDITABLE_SHIPPING_STATUSES) + ".";
     private static final String MSG_PAYMENT_REFUND_INVARIANT =
             "Payment row not in SUCCESS state for cancelled order; transaction rolled back.";
 
@@ -60,6 +77,7 @@ public class OrderService {
     private final OrderEntityToOrderSummaryDtoMapper orderEntityToOrderSummaryDtoMapper;
     private final OrderItemEntityToOrderItemDtoMapper orderItemEntityToOrderItemDtoMapper;
     private final PaymentEntityToOrderPaymentDtoMapper paymentEntityToOrderPaymentDtoMapper;
+    private final UserEntityToCustomerForOrderDtoMapper userEntityToCustomerForOrderDtoMapper;
     private final PaginationService paginationService;
 
     public OrderService(OrderRepository orderRepository,
@@ -69,6 +87,7 @@ public class OrderService {
                         OrderEntityToOrderSummaryDtoMapper orderEntityToOrderSummaryDtoMapper,
                         OrderItemEntityToOrderItemDtoMapper orderItemEntityToOrderItemDtoMapper,
                         PaymentEntityToOrderPaymentDtoMapper paymentEntityToOrderPaymentDtoMapper,
+                        UserEntityToCustomerForOrderDtoMapper userEntityToCustomerForOrderDtoMapper,
                         PaginationService paginationService) {
         this.orderRepository = orderRepository;
         this.orderItemRepository = orderItemRepository;
@@ -77,25 +96,28 @@ public class OrderService {
         this.orderEntityToOrderSummaryDtoMapper = orderEntityToOrderSummaryDtoMapper;
         this.orderItemEntityToOrderItemDtoMapper = orderItemEntityToOrderItemDtoMapper;
         this.paymentEntityToOrderPaymentDtoMapper = paymentEntityToOrderPaymentDtoMapper;
+        this.userEntityToCustomerForOrderDtoMapper = userEntityToCustomerForOrderDtoMapper;
         this.paginationService = paginationService;
     }
 
     @Transactional(readOnly = true)
-    public PagedResult<OrderSummaryDto> listForUser(Long userId,
-                                                    String status,
-                                                    String orderNumberSearch,
-                                                    BigDecimal amountMin,
-                                                    BigDecimal amountMax,
-                                                    LocalDate dateFrom,
-                                                    LocalDate dateTo,
-                                                    String sortField,
-                                                    String sortDirection,
-                                                    Integer page,
-                                                    Integer pageSize) {
+    public PagedResult<OrderSummaryDto> list(Long userId,
+                                             String status,
+                                             String orderNumberSearch,
+                                             String customer,
+                                             BigDecimal amountMin,
+                                             BigDecimal amountMax,
+                                             LocalDate dateFrom,
+                                             LocalDate dateTo,
+                                             String sortField,
+                                             String sortDirection,
+                                             Integer page,
+                                             Integer pageSize) {
         Specification<OrderEntity> spec = Specification.allOf(
                 OrderSpecifications.userIdEquals(userId),
                 OrderSpecifications.statusEquals(status),
                 OrderSpecifications.orderNumberContainsIgnoreCase(orderNumberSearch),
+                OrderSpecifications.customerMatches(customer),
                 OrderSpecifications.totalPriceGte(amountMin),
                 OrderSpecifications.totalPriceLte(amountMax),
                 OrderSpecifications.createdAtGte(toUtcStartOfDay(dateFrom)),
@@ -110,12 +132,20 @@ public class OrderService {
         );
     }
 
+    // userId == null -> admin context, no owner gate; 404 only when the order number doesn't exist.
+    // userId != null -> regular user; the finder's WHERE user_id = :userId clause proves the order
+    //   belongs to the caller. A row owned by someone else won't match and surfaces as the same
+    //   404 as a missing order, so we never leak whether the order exists for a different user.
     @Transactional(readOnly = true)
-    public OrderDetailDto getDetailForUser(String orderNumber, Long userId) {
-        // Owner gate: missing OR not-owned both surface as the same 404, no information leak.
-        OrderEntity order = orderRepository.findByOrderNumberAndUserId(orderNumber, userId)
+    public OrderDetailDto getDetail(String orderNumber, Long userId) {
+        OrderEntity order = (userId == null
+                ? orderRepository.findWithUserByOrderNumber(orderNumber)
+                : orderRepository.findWithUserByOrderNumberAndUserId(orderNumber, userId))
                 .orElseThrow(() -> new NotFoundException(MSG_ORDER_NOT_FOUND));
+        return buildDetailDto(order);
+    }
 
+    private OrderDetailDto buildDetailDto(OrderEntity order) {
         List<OrderItemDto> items = orderItemRepository.findByOrderIdOrderByIdAsc(order.getId()).stream()
                 .map(orderItemEntityToOrderItemDtoMapper::map)
                 .toList();
@@ -143,27 +173,37 @@ public class OrderService {
                 order.getItemCount(),
                 items,
                 shipping,
-                paymentDto
+                paymentDto,
+                userEntityToCustomerForOrderDtoMapper.map(order.getUser())
         );
     }
 
+    // userId == null -> admin path (no owner gate, broader status set); userId != null -> user
+    // path (owner gate, PAID-only). actorId is the acting caller (== userId for users) and
+    // lands on cancelled_by + updated_by.
     @Transactional
-    public void cancelForUser(String orderNumber, Long userId) {
-        log.info("Cancel started: userId={} orderNumber={}", userId, orderNumber);
+    public void cancel(String orderNumber, Long userId, Long actorId) {
+        boolean isAdmin = (userId == null);
+        log.info("Cancel started: actorId={} isAdmin={} orderNumber={}", actorId, isAdmin, orderNumber);
 
-        OrderEntity order = orderRepository.findByOrderNumberAndUserId(orderNumber, userId)
+        OrderEntity order = (isAdmin
+                ? orderRepository.findWithUserByOrderNumber(orderNumber)
+                : orderRepository.findByOrderNumberAndUserId(orderNumber, userId))
                 .orElseThrow(() -> new NotFoundException(MSG_ORDER_NOT_FOUND));
 
-        if (!STATUS_PAID.equals(order.getStatus())) {
-            log.warn("Cancel rejected: orderId={} userId={} currentStatus={}",
-                    order.getId(), userId, order.getStatus());
+        boolean cancellable = isAdmin
+                ? ADMIN_CANCELLABLE_STATUSES.contains(order.getStatus())
+                : OrderStatusTransitions.STATUS_PAID.equals(order.getStatus());
+        if (!cancellable) {
+            log.warn("Cancel rejected: orderId={} actorId={} isAdmin={} currentStatus={}",
+                    order.getId(), actorId, isAdmin, order.getStatus());
             throw new ConflictException(MSG_ORDER_CANNOT_BE_CANCELLED);
         }
 
-        int orderAffected = orderRepository.cancelOwnUserOrder(order.getId(), userId);
+        int orderAffected = orderRepository.cancel(order.getId(), isAdmin, actorId);
         if (orderAffected == 0) {
-            log.warn("Cancel race: orderId={} userId={} -- order moved off PAID between pre-flight and write",
-                    order.getId(), userId);
+            log.warn("Cancel race: orderId={} actorId={} isAdmin={} -- order moved out of the cancellable set between pre-flight and write",
+                    order.getId(), actorId, isAdmin);
             throw new ConflictException(MSG_ORDER_CANNOT_BE_CANCELLED);
         }
 
@@ -183,14 +223,78 @@ public class OrderService {
             }
         }
 
-        int refunded = paymentRepository.refundIfSuccess(order.getId(), userId);
+        int refunded = paymentRepository.refundIfSuccess(order.getId(), actorId);
         if (refunded == 0) {
-            log.error("Payment refund invariant break: orderId={} userId={}", order.getId(), userId);
+            log.error("Payment refund invariant break: orderId={} actorId={}", order.getId(), actorId);
             throw new IllegalStateException(MSG_PAYMENT_REFUND_INVARIANT);
         }
 
-        log.info("Cancel completed: orderId={} userId={} orderNumber={}",
-                order.getId(), userId, orderNumber);
+        log.info("Cancel completed: orderId={} actorId={} isAdmin={} orderNumber={}",
+                order.getId(), actorId, isAdmin, orderNumber);
+    }
+
+    // Admin-only. priorStatus is the OCC anchor (pre-check + SQL WHERE).
+    @Transactional
+    public void updateStatus(String orderNumber, String priorStatus, String targetStatus, Long adminId) {
+        log.info("Update status started: adminId={} orderNumber={} prior={} target={}",
+                adminId, orderNumber, priorStatus, targetStatus);
+
+        if (!OrderStatusTransitions.isAllowed(priorStatus, targetStatus)) {
+            log.warn("Update status rejected (illegal transition): adminId={} orderNumber={} prior={} target={}",
+                    adminId, orderNumber, priorStatus, targetStatus);
+            throw new BadRequestException(
+                    String.format(MSG_INVALID_STATUS_TRANSITION, priorStatus, targetStatus));
+        }
+
+        OrderEntity order = orderRepository.findByOrderNumber(orderNumber)
+                .orElseThrow(() -> new NotFoundException(MSG_ORDER_NOT_FOUND));
+
+        int affected = orderRepository.updateStatus(order.getId(), priorStatus, targetStatus, adminId);
+        if (affected == 0) {
+            log.warn("Update status race: orderId={} adminId={} prior={} target={} actual={}",
+                    order.getId(), adminId, priorStatus, targetStatus, order.getStatus());
+            throw new ConflictException(MSG_ORDER_STATUS_CHANGED);
+        }
+
+        log.info("Update status completed: orderId={} adminId={} orderNumber={} prior={} target={}",
+                order.getId(), adminId, orderNumber, priorStatus, targetStatus);
+    }
+
+    @Transactional
+    public void updateShipping(String orderNumber,
+                               String priorStatus,
+                               ShippingDetailsDto shipping,
+                               Long adminId) {
+        log.info("Update shipping started: adminId={} orderNumber={} prior={}",
+                adminId, orderNumber, priorStatus);
+
+        if (!ADMIN_EDITABLE_SHIPPING_STATUSES.contains(priorStatus)) {
+            log.warn("Update shipping rejected (status not editable): adminId={} orderNumber={} prior={}",
+                    adminId, orderNumber, priorStatus);
+            throw new BadRequestException(MSG_SHIPPING_NOT_EDITABLE);
+        }
+
+        OrderEntity order = orderRepository.findByOrderNumber(orderNumber)
+                .orElseThrow(() -> new NotFoundException(MSG_ORDER_NOT_FOUND));
+
+        int affected = orderRepository.updateShipping(
+                order.getId(),
+                priorStatus,
+                shipping.getFullName(),
+                shipping.getEmail(),
+                shipping.getPhone(),
+                shipping.getCountry(),
+                shipping.getCity(),
+                shipping.getAddressLine(),
+                adminId);
+        if (affected == 0) {
+            log.warn("Update shipping race: orderId={} adminId={} prior={} actual={}",
+                    order.getId(), adminId, priorStatus, order.getStatus());
+            throw new ConflictException(MSG_ORDER_STATUS_CHANGED);
+        }
+
+        log.info("Update shipping completed: orderId={} adminId={} orderNumber={} prior={}",
+                order.getId(), adminId, orderNumber, priorStatus);
     }
 
     // Lower bound for dateFrom: 00:00:00Z of the same day, used with `>=`.
