@@ -53,6 +53,8 @@ public interface OrderRepository extends JpaRepository<OrderEntity, Long>,
 
     Optional<OrderEntity> findByOrderNumberAndUserId(String orderNumber, Long userId);
 
+    Optional<OrderEntity> findByOrderNumber(String orderNumber);
+
     // fetch user up front so the detail mapper's entity.getUser() doesn't fire a second query.
     @EntityGraph(attributePaths = "user")
     Optional<OrderEntity> findWithUserByOrderNumberAndUserId(String orderNumber, Long userId);
@@ -82,4 +84,18 @@ public interface OrderRepository extends JpaRepository<OrderEntity, Long>,
     int cancel(@Param("id") Long id,
                @Param("isAdmin") boolean isAdmin,
                @Param("actorId") Long actorId);
+
+    @Modifying(clearAutomatically = true)
+    @Query(value = """
+            UPDATE orders
+               SET status     = :targetStatus,
+                   updated_at = NOW(),
+                   updated_by = :adminId
+             WHERE id     = :id
+               AND status = :priorStatus
+            """, nativeQuery = true)
+    int updateStatus(@Param("id") Long id,
+                     @Param("priorStatus") String priorStatus,
+                     @Param("targetStatus") String targetStatus,
+                     @Param("adminId") Long adminId);
 }

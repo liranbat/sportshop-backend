@@ -5,6 +5,7 @@ import com.java.sadna.backend.sportshop.api.generated.orders.api.OrdersApi;
 import com.java.sadna.backend.sportshop.api.generated.orders.model.OrderDetail;
 import com.java.sadna.backend.sportshop.api.generated.orders.model.OrderListPage;
 import com.java.sadna.backend.sportshop.api.generated.orders.model.OrderStatus;
+import com.java.sadna.backend.sportshop.api.generated.orders.model.UpdateOrderStatusRequest;
 import com.java.sadna.backend.sportshop.mapper.OrderDetailDtoToOrderDetailMapper;
 import com.java.sadna.backend.sportshop.mapper.PagedOrderSummaryDtoToOrderListPageMapper;
 import com.java.sadna.backend.sportshop.model.OrderDetailDto;
@@ -122,6 +123,19 @@ public class OrderController implements OrdersApi, AdminOrdersApi {
     public ResponseEntity<Void> cancelAdminOrder(String orderNumber) {
         Long adminId = SecurityContextUtils.currentUserIdOrThrow();
         orderService.cancel(orderNumber, null, adminId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @Override
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> updateAdminOrderStatus(String orderNumber, UpdateOrderStatusRequest body) {
+        Long adminId = SecurityContextUtils.currentUserIdOrThrow();
+        orderService.updateStatus(
+                orderNumber,
+                body.getPriorStatus().getValue(),
+                body.getTargetStatus().getValue(),
+                adminId
+        );
         return ResponseEntity.noContent().build();
     }
 }

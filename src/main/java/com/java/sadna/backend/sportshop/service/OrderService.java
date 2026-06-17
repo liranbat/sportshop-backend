@@ -3,6 +3,7 @@ package com.java.sadna.backend.sportshop.service;
 import com.java.sadna.backend.sportshop.entity.OrderEntity;
 import com.java.sadna.backend.sportshop.entity.OrderItemEntity;
 import com.java.sadna.backend.sportshop.entity.PaymentEntity;
+import com.java.sadna.backend.sportshop.exception.BadRequestException;
 import com.java.sadna.backend.sportshop.exception.ConflictException;
 import com.java.sadna.backend.sportshop.exception.NotFoundException;
 import com.java.sadna.backend.sportshop.mapper.OrderEntityToOrderSummaryDtoMapper;
@@ -20,6 +21,7 @@ import com.java.sadna.backend.sportshop.repository.OrderRepository;
 import com.java.sadna.backend.sportshop.repository.PaymentRepository;
 import com.java.sadna.backend.sportshop.repository.ProductStockRepository;
 import com.java.sadna.backend.sportshop.repository.specification.OrderSpecifications;
+import com.java.sadna.backend.sportshop.util.OrderStatusTransitions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Sort;
@@ -48,15 +50,15 @@ public class OrderService {
 
     private static final int DEFAULT_PAGE_SIZE = 10;
 
-    private static final String STATUS_PAID = "PAID";
-    private static final String STATUS_SHIPPED = "SHIPPED";
-    private static final String STATUS_DELIVERED = "DELIVERED";
-
-    private static final Set<String> ADMIN_CANCELLABLE_STATUSES =
-            Set.of(STATUS_PAID, STATUS_SHIPPED, STATUS_DELIVERED);
+    private static final Set<String> ADMIN_CANCELLABLE_STATUSES = Set.of(
+            OrderStatusTransitions.STATUS_PAID,
+            OrderStatusTransitions.STATUS_SHIPPED,
+            OrderStatusTransitions.STATUS_DELIVERED);
 
     private static final String MSG_ORDER_NOT_FOUND = "Order not found.";
     private static final String MSG_ORDER_CANNOT_BE_CANCELLED = "This order can no longer be cancelled.";
+    private static final String MSG_INVALID_STATUS_TRANSITION = "Invalid status transition: %s -> %s.";
+    private static final String MSG_ORDER_STATUS_CHANGED = "Order status changed since you opened the form.";
     private static final String MSG_PAYMENT_REFUND_INVARIANT =
             "Payment row not in SUCCESS state for cancelled order; transaction rolled back.";
 
@@ -183,7 +185,7 @@ public class OrderService {
 
         boolean cancellable = isAdmin
                 ? ADMIN_CANCELLABLE_STATUSES.contains(order.getStatus())
-                : STATUS_PAID.equals(order.getStatus());
+                : OrderStatusTransitions.STATUS_PAID.equals(order.getStatus());
         if (!cancellable) {
             log.warn("Cancel rejected: orderId={} actorId={} isAdmin={} currentStatus={}",
                     order.getId(), actorId, isAdmin, order.getStatus());
@@ -221,6 +223,33 @@ public class OrderService {
 
         log.info("Cancel completed: orderId={} actorId={} isAdmin={} orderNumber={}",
                 order.getId(), actorId, isAdmin, orderNumber);
+    }
+
+    // Admin-only. priorStatus is the OCC anchor (pre-check + SQL WHERE).
+    @Transactional
+    public void updateStatus(String orderNumber, String priorStatus, String targetStatus, Long adminId) {
+        log.info("Update status started: adminId={} orderNumber={} prior={} target={}",
+                adminId, orderNumber, priorStatus, targetStatus);
+
+        if (!OrderStatusTransitions.isAllowed(priorStatus, targetStatus)) {
+            log.warn("Update status rejected (illegal transition): adminId={} orderNumber={} prior={} target={}",
+                    adminId, orderNumber, priorStatus, targetStatus);
+            throw new BadRequestException(
+                    String.format(MSG_INVALID_STATUS_TRANSITION, priorStatus, targetStatus));
+        }
+
+        OrderEntity order = orderRepository.findByOrderNumber(orderNumber)
+                .orElseThrow(() -> new NotFoundException(MSG_ORDER_NOT_FOUND));
+
+        int affected = orderRepository.updateStatus(order.getId(), priorStatus, targetStatus, adminId);
+        if (affected == 0) {
+            log.warn("Update status race: orderId={} adminId={} prior={} target={} actual={}",
+                    order.getId(), adminId, priorStatus, targetStatus, order.getStatus());
+            throw new ConflictException(MSG_ORDER_STATUS_CHANGED);
+        }
+
+        log.info("Update status completed: orderId={} adminId={} orderNumber={} prior={} target={}",
+                order.getId(), adminId, orderNumber, priorStatus, targetStatus);
     }
 
     // Lower bound for dateFrom: 00:00:00Z of the same day, used with `>=`.
