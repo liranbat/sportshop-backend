@@ -98,4 +98,28 @@ public interface OrderRepository extends JpaRepository<OrderEntity, Long>,
                      @Param("priorStatus") String priorStatus,
                      @Param("targetStatus") String targetStatus,
                      @Param("adminId") Long adminId);
+
+    @Modifying(clearAutomatically = true)
+    @Query(value = """
+            UPDATE orders
+               SET shipping_full_name    = :shippingFullName,
+                   shipping_email        = :shippingEmail,
+                   shipping_phone        = :shippingPhone,
+                   shipping_country      = :shippingCountry,
+                   shipping_city         = :shippingCity,
+                   shipping_address_line = :shippingAddressLine,
+                   updated_at            = NOW(),
+                   updated_by            = :adminId
+             WHERE id     = :id
+               AND status = :priorStatus
+            """, nativeQuery = true)
+    int updateShipping(@Param("id") Long id,
+                       @Param("priorStatus") String priorStatus,
+                       @Param("shippingFullName") String shippingFullName,
+                       @Param("shippingEmail") String shippingEmail,
+                       @Param("shippingPhone") String shippingPhone,
+                       @Param("shippingCountry") String shippingCountry,
+                       @Param("shippingCity") String shippingCity,
+                       @Param("shippingAddressLine") String shippingAddressLine,
+                       @Param("adminId") Long adminId);
 }

@@ -55,10 +55,18 @@ public class OrderService {
             OrderStatusTransitions.STATUS_SHIPPED,
             OrderStatusTransitions.STATUS_DELIVERED);
 
+    private static final List<String> ADMIN_EDITABLE_SHIPPING_STATUSES = List.of(
+            OrderStatusTransitions.STATUS_PAID,
+            OrderStatusTransitions.STATUS_SHIPPED,
+            OrderStatusTransitions.STATUS_DELIVERED);
+
     private static final String MSG_ORDER_NOT_FOUND = "Order not found.";
     private static final String MSG_ORDER_CANNOT_BE_CANCELLED = "This order can no longer be cancelled.";
     private static final String MSG_INVALID_STATUS_TRANSITION = "Invalid status transition: %s -> %s.";
     private static final String MSG_ORDER_STATUS_CHANGED = "Order status changed since you opened the form.";
+    private static final String MSG_SHIPPING_NOT_EDITABLE =
+            "Shipping address can only be edited while the order is in "
+                    + String.join(", ", ADMIN_EDITABLE_SHIPPING_STATUSES) + ".";
     private static final String MSG_PAYMENT_REFUND_INVARIANT =
             "Payment row not in SUCCESS state for cancelled order; transaction rolled back.";
 
@@ -250,6 +258,43 @@ public class OrderService {
 
         log.info("Update status completed: orderId={} adminId={} orderNumber={} prior={} target={}",
                 order.getId(), adminId, orderNumber, priorStatus, targetStatus);
+    }
+
+    @Transactional
+    public void updateShipping(String orderNumber,
+                               String priorStatus,
+                               ShippingDetailsDto shipping,
+                               Long adminId) {
+        log.info("Update shipping started: adminId={} orderNumber={} prior={}",
+                adminId, orderNumber, priorStatus);
+
+        if (!ADMIN_EDITABLE_SHIPPING_STATUSES.contains(priorStatus)) {
+            log.warn("Update shipping rejected (status not editable): adminId={} orderNumber={} prior={}",
+                    adminId, orderNumber, priorStatus);
+            throw new BadRequestException(MSG_SHIPPING_NOT_EDITABLE);
+        }
+
+        OrderEntity order = orderRepository.findByOrderNumber(orderNumber)
+                .orElseThrow(() -> new NotFoundException(MSG_ORDER_NOT_FOUND));
+
+        int affected = orderRepository.updateShipping(
+                order.getId(),
+                priorStatus,
+                shipping.getFullName(),
+                shipping.getEmail(),
+                shipping.getPhone(),
+                shipping.getCountry(),
+                shipping.getCity(),
+                shipping.getAddressLine(),
+                adminId);
+        if (affected == 0) {
+            log.warn("Update shipping race: orderId={} adminId={} prior={} actual={}",
+                    order.getId(), adminId, priorStatus, order.getStatus());
+            throw new ConflictException(MSG_ORDER_STATUS_CHANGED);
+        }
+
+        log.info("Update shipping completed: orderId={} adminId={} orderNumber={} prior={}",
+                order.getId(), adminId, orderNumber, priorStatus);
     }
 
     // Lower bound for dateFrom: 00:00:00Z of the same day, used with `>=`.

@@ -6,7 +6,9 @@ import com.java.sadna.backend.sportshop.api.generated.orders.model.OrderDetail;
 import com.java.sadna.backend.sportshop.api.generated.orders.model.OrderListPage;
 import com.java.sadna.backend.sportshop.api.generated.orders.model.OrderStatus;
 import com.java.sadna.backend.sportshop.api.generated.orders.model.UpdateOrderStatusRequest;
+import com.java.sadna.backend.sportshop.api.generated.orders.model.UpdateShippingAddressRequest;
 import com.java.sadna.backend.sportshop.mapper.OrderDetailDtoToOrderDetailMapper;
+import com.java.sadna.backend.sportshop.mapper.OrderShippingToShippingDetailsDtoMapper;
 import com.java.sadna.backend.sportshop.mapper.PagedOrderSummaryDtoToOrderListPageMapper;
 import com.java.sadna.backend.sportshop.model.OrderDetailDto;
 import com.java.sadna.backend.sportshop.model.OrderSummaryDto;
@@ -26,13 +28,16 @@ public class OrderController implements OrdersApi, AdminOrdersApi {
     private final OrderService orderService;
     private final PagedOrderSummaryDtoToOrderListPageMapper pagedOrderSummaryDtoToOrderListPageMapper;
     private final OrderDetailDtoToOrderDetailMapper orderDetailDtoToOrderDetailMapper;
+    private final OrderShippingToShippingDetailsDtoMapper orderShippingToShippingDetailsDtoMapper;
 
     public OrderController(OrderService orderService,
                            PagedOrderSummaryDtoToOrderListPageMapper pagedOrderSummaryDtoToOrderListPageMapper,
-                           OrderDetailDtoToOrderDetailMapper orderDetailDtoToOrderDetailMapper) {
+                           OrderDetailDtoToOrderDetailMapper orderDetailDtoToOrderDetailMapper,
+                           OrderShippingToShippingDetailsDtoMapper orderShippingToShippingDetailsDtoMapper) {
         this.orderService = orderService;
         this.pagedOrderSummaryDtoToOrderListPageMapper = pagedOrderSummaryDtoToOrderListPageMapper;
         this.orderDetailDtoToOrderDetailMapper = orderDetailDtoToOrderDetailMapper;
+        this.orderShippingToShippingDetailsDtoMapper = orderShippingToShippingDetailsDtoMapper;
     }
 
     @Override
@@ -134,6 +139,19 @@ public class OrderController implements OrdersApi, AdminOrdersApi {
                 orderNumber,
                 body.getPriorStatus().getValue(),
                 body.getTargetStatus().getValue(),
+                adminId
+        );
+        return ResponseEntity.noContent().build();
+    }
+
+    @Override
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> updateAdminOrderShipping(String orderNumber, UpdateShippingAddressRequest body) {
+        Long adminId = SecurityContextUtils.currentUserIdOrThrow();
+        orderService.updateShipping(
+                orderNumber,
+                body.getPriorStatus().getValue(),
+                orderShippingToShippingDetailsDtoMapper.map(body.getShipping()),
                 adminId
         );
         return ResponseEntity.noContent().build();
