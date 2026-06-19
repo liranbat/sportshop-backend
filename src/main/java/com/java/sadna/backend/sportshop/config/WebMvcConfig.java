@@ -1,10 +1,22 @@
 package com.java.sadna.backend.sportshop.config;
 
 import com.java.sadna.backend.sportshop.security.JwtCookieAuthenticationFilter;
+import org.springframework.boot.autoconfigure.security.SecurityProperties;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.lang.NonNull;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
+import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
+import java.nio.file.Path;
+
+// Owns everything image- and CORS-related on the MVC side:
+//   - CORS rules for /api/**.
+//   - Static resource handler for /images/** (serves files straight from disk).
+//   - FilterRegistrationBean that wires ImageResponseHeadersFilter to /images/*
+//     just before Spring Security in the filter chain.
 @Configuration
 public class WebMvcConfig implements WebMvcConfigurer {
 
@@ -20,7 +32,29 @@ public class WebMvcConfig implements WebMvcConfigurer {
                 .allowedOrigins(props.getCors().getAllowedOrigins().toArray(String[]::new))
                 .allowedMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
                 .allowedHeaders("*")
-                .exposedHeaders(TraceIdResponseHeaderFilter.HEADER, JwtCookieAuthenticationFilter.ROLE_HEADER)
+                .exposedHeaders(
+                        TraceIdResponseHeaderFilter.HEADER,
+                        JwtCookieAuthenticationFilter.ROLE_HEADER)
                 .allowCredentials(true);
+    }
+
+    @Override
+    public void addResourceHandlers(@NonNull ResourceHandlerRegistry registry) {
+        String urlPrefix = props.getImages().getUrlPrefix();
+        Path absoluteDir = Path.of(props.getImages().getLocalDir()).toAbsolutePath().normalize();
+        String location = absoluteDir.toUri().toString();
+
+        registry.addResourceHandler("/" + urlPrefix + "/**")
+                .addResourceLocations(location);
+    }
+
+    @Bean
+    public FilterRegistrationBean<ImageResponseHeadersFilter> imageResponseHeadersFilterRegistration() {
+        FilterRegistrationBean<ImageResponseHeadersFilter> registration =
+                new FilterRegistrationBean<>(new ImageResponseHeadersFilter(props));
+        registration.addUrlPatterns("/" + props.getImages().getUrlPrefix() + "/*");
+        registration.setOrder(SecurityProperties.DEFAULT_FILTER_ORDER - 1);
+        registration.setName("imageResponseHeadersFilter");
+        return registration;
     }
 }

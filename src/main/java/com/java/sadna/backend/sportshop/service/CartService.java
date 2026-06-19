@@ -13,7 +13,7 @@ import com.java.sadna.backend.sportshop.model.CartValidationResultDto;
 import com.java.sadna.backend.sportshop.model.CartViewDto;
 import com.java.sadna.backend.sportshop.model.CartViewRowDto;
 import com.java.sadna.backend.sportshop.model.StockIssueDto;
-import com.java.sadna.backend.sportshop.model.StockIssueKindDto;
+import com.java.sadna.backend.sportshop.model.enums.StockIssueKind;
 import com.java.sadna.backend.sportshop.model.VersionMismatchDto;
 import com.java.sadna.backend.sportshop.repository.CartItemRepository;
 import com.java.sadna.backend.sportshop.repository.ProductRepository;
@@ -197,7 +197,7 @@ public class CartService {
                     row.getProductId(),
                     row.getProductName(),
                     row.getSize(),
-                    StockIssueKindDto.OUT_OF_STOCK,
+                    StockIssueKind.OUT_OF_STOCK,
                     available == null ? 0 : available,
                     requested
             ));
@@ -207,7 +207,7 @@ public class CartService {
                     row.getProductId(),
                     row.getProductName(),
                     row.getSize(),
-                    StockIssueKindDto.INSUFFICIENT_STOCK,
+                    StockIssueKind.INSUFFICIENT_STOCK,
                     available,
                     requested
             ));

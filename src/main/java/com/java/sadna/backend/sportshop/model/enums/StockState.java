@@ -1,4 +1,4 @@
-package com.java.sadna.backend.sportshop.model;
+package com.java.sadna.backend.sportshop.model.enums;
 
 public enum StockState {
     IN_STOCK,
