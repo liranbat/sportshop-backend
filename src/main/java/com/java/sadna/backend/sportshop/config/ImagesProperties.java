@@ -1,5 +1,7 @@
 package com.java.sadna.backend.sportshop.config;
 
+import com.java.sadna.backend.sportshop.model.enums.ResourceImagePolicy;
+
 public class ImagesProperties {
 
     private final String publicBaseUrl;
@@ -56,6 +58,23 @@ public class ImagesProperties {
     // Generic composer for callers that already know the subdir (e.g. upload service).
     public String composeUrl(String subdir, String filename) {
         return filename == null ? null : publicBaseUrl + "/" + urlPrefix + "/" + subdir + "/" + filename;
+    }
+
+    public String parseFilename(ResourceImagePolicy policy, String url) {
+        if (url == null) {
+            return null;
+        }
+        String expectedPrefix = publicBaseUrl + "/" + urlPrefix + "/" + policy.subdirIn(this) + "/";
+        if (!url.startsWith(expectedPrefix)) {
+            throw new IllegalArgumentException(
+                    "URL does not match expected prefix " + expectedPrefix);
+        }
+        String filename = url.substring(expectedPrefix.length());
+        if (filename.isEmpty() || filename.contains("/") || filename.contains("\\")) {
+            throw new IllegalArgumentException(
+                    "URL has empty or nested filename suffix after prefix");
+        }
+        return filename;
     }
 
     // URL-path prefix (no host) for matching any image request, e.g. "/images/".
