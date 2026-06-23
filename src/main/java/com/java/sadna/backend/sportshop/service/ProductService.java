@@ -28,6 +28,7 @@ public class ProductService {
     private static final String SORT_FIELD_NAME = "name";
     private static final String SORT_FIELD_PRICE = "price";
     private static final String SORT_FIELD_CATEGORY = "category";
+    private static final String SORT_FIELD_UPDATED_AT = "updatedAt";
     // JPA path resolved via the read-only ManyToOne CategoryEntity association on ProductEntity.
     private static final String SORT_PATH_CATEGORY_NAME = "category.name";
     private static final String SORT_DIRECTION_DESC = "desc";
@@ -103,21 +104,28 @@ public class ProductService {
     }
 
     private Sort buildSort(String sortField, String sortDirection) {
+        Sort.Order idTieBreak = Sort.Order.asc(SORT_FIELD_ID);
         if (sortField == null || sortField.isBlank()) {
-            return Sort.by(SORT_FIELD_ID).ascending();
+            return Sort.by(idTieBreak);
         }
         Sort.Direction direction = SORT_DIRECTION_DESC.equalsIgnoreCase(sortDirection)
                 ? Sort.Direction.DESC
                 : Sort.Direction.ASC;
-        if (SORT_FIELD_PRICE.equalsIgnoreCase(sortField)) {
-            return Sort.by(direction, SORT_FIELD_PRICE);
+        String primaryField = resolvePrimarySortField(sortField);
+        if (primaryField == null) {
+            return Sort.by(idTieBreak);
         }
-        if (SORT_FIELD_NAME.equalsIgnoreCase(sortField)) {
-            return Sort.by(direction, SORT_FIELD_NAME);
+        if (SORT_FIELD_ID.equalsIgnoreCase(primaryField)) {
+            return Sort.by(new Sort.Order(direction, SORT_FIELD_ID));
         }
-        if (SORT_FIELD_CATEGORY.equalsIgnoreCase(sortField)) {
-            return Sort.by(direction, SORT_PATH_CATEGORY_NAME);
-        }
-        return Sort.by(SORT_FIELD_ID).ascending();
+        return Sort.by(new Sort.Order(direction, primaryField), idTieBreak);
+    }
+
+    private String resolvePrimarySortField(String sortField) {
+        if (SORT_FIELD_PRICE.equalsIgnoreCase(sortField)) return SORT_FIELD_PRICE;
+        if (SORT_FIELD_NAME.equalsIgnoreCase(sortField)) return SORT_FIELD_NAME;
+        if (SORT_FIELD_CATEGORY.equalsIgnoreCase(sortField)) return SORT_PATH_CATEGORY_NAME;
+        if (SORT_FIELD_UPDATED_AT.equalsIgnoreCase(sortField)) return SORT_FIELD_UPDATED_AT;
+        return null;
     }
 }

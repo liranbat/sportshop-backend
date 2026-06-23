@@ -37,6 +37,11 @@ public class ProductDetailDtoToProductDetailMapper implements BaseMapper<Product
                 .imageUrl(imagesProperties.getProductImageUrl(product.getImageFilename()))
                 .price(product.getPrice())
                 .version(product.getVersion())
+                .isArchived(product.isArchived())
+                .updatedAt(product.getUpdatedAt())
+                .updatedBy(product.getUpdatedBy())
+                .archivedAt(product.getArchivedAt())
+                .archivedBy(product.getArchivedBy())
                 .categoryName(source.getCategoryName())
                 .sizes(sizes);
     }
