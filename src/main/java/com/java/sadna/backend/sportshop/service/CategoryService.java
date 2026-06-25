@@ -36,6 +36,7 @@ public class CategoryService {
             "Replacement category does not exist or is itself soft-deleted.";
     private static final String INVALID_ICON_URL_MESSAGE =
             "Icon URL is not a valid category icon URL produced by the upload pipeline.";
+    private static final String INVALID_CATEGORY_ID_MESSAGE = "Invalid categoryId.";
 
     private static final Comparator<CategoryEntity> LIST_ORDER = Comparator
             .comparing(CategoryEntity::getName, String.CASE_INSENSITIVE_ORDER)
@@ -92,7 +93,7 @@ public class CategoryService {
         if (source.isDeleted()) {
             throw new ConflictException(CATEGORY_ALREADY_DELETED_MESSAGE);
         }
-        CategoryEntity replacement = categoryRepository.findByIdForShare(replacementCategoryId)
+        CategoryEntity replacement = categoryRepository.findByIdWithLock(replacementCategoryId)
                 .orElseThrow(() -> new BadRequestException(REPLACEMENT_NOT_ACTIVE_MESSAGE));
         if (replacement.isDeleted()) {
             throw new BadRequestException(REPLACEMENT_NOT_ACTIVE_MESSAGE);
@@ -116,6 +117,14 @@ public class CategoryService {
                     : new NotFoundException(CATEGORY_NOT_FOUND_MESSAGE);
         }
         return loadCategoryByIdOrThrow(id);
+    }
+
+    public void assertActiveForProductWrite(Long categoryId) {
+        CategoryEntity category = categoryRepository.findByIdWithLock(categoryId)
+                .orElseThrow(() -> new BadRequestException(INVALID_CATEGORY_ID_MESSAGE));
+        if (category.isDeleted()) {
+            throw new ConflictException(CATEGORY_ALREADY_DELETED_MESSAGE);
+        }
     }
 
     private CategoryDto loadCategoryByIdOrThrow(Long id) {

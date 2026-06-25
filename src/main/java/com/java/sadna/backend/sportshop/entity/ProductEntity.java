@@ -51,7 +51,7 @@ public class ProductEntity {
 
     @Version
     @Column(name = "version", nullable = false)
-    private int version;
+    private int version = 1;
 
     @Column(name = "is_archived", nullable = false)
     private boolean archived;
@@ -69,6 +69,20 @@ public class ProductEntity {
     private Long archivedBy;
 
     protected ProductEntity() {
+    }
+
+    public ProductEntity(String name,
+                         String description,
+                         Long categoryId,
+                         boolean multiSize,
+                         String imageFilename,
+                         BigDecimal price) {
+        this.name = name;
+        this.description = description;
+        this.categoryId = categoryId;
+        this.multiSize = multiSize;
+        this.imageFilename = imageFilename;
+        this.price = price;
     }
 
     public Long getId() {

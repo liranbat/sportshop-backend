@@ -16,7 +16,7 @@ public interface CategoryRepository extends JpaRepository<CategoryEntity, Long> 
     // share-locks the row for the rest of the TX so another admin can't mutate it until we commit.
     @Lock(LockModeType.PESSIMISTIC_READ)
     @Query("SELECT c FROM CategoryEntity c WHERE c.id = :id")
-    Optional<CategoryEntity> findByIdForShare(@Param("id") Long id);
+    Optional<CategoryEntity> findByIdWithLock(@Param("id") Long id);
 
     @Modifying(clearAutomatically = true)
     @Query("""

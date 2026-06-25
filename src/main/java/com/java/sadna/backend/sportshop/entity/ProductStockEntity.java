@@ -29,6 +29,13 @@ public class ProductStockEntity {
     protected ProductStockEntity() {
     }
 
+    public ProductStockEntity(Long productId, String size, int quantity, Integer lowStockThreshold) {
+        this.productId = productId;
+        this.size = size;
+        this.quantity = quantity;
+        this.lowStockThreshold = lowStockThreshold;
+    }
+
     public Long getProductId() {
         return productId;
     }

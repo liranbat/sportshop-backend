@@ -3,9 +3,11 @@ package com.java.sadna.backend.sportshop.controller;
 import com.java.sadna.backend.sportshop.api.generated.products.api.AdminProductsApi;
 import com.java.sadna.backend.sportshop.api.generated.products.api.ProductsApi;
 import com.java.sadna.backend.sportshop.api.generated.products.model.ProductArchiveStatusFilter;
+import com.java.sadna.backend.sportshop.api.generated.products.model.ProductCreateRequest;
 import com.java.sadna.backend.sportshop.api.generated.products.model.ProductDetail;
 import com.java.sadna.backend.sportshop.api.generated.products.model.ProductPage;
 import com.java.sadna.backend.sportshop.mapper.PagedProductDtoToProductPageMapper;
+import com.java.sadna.backend.sportshop.mapper.ProductCreateRequestToProductCreateRequestDtoMapper;
 import com.java.sadna.backend.sportshop.mapper.ProductDetailDtoToProductDetailMapper;
 import com.java.sadna.backend.sportshop.model.PagedResult;
 import com.java.sadna.backend.sportshop.model.ProductDetailDto;
@@ -24,13 +26,16 @@ public class ProductController implements ProductsApi, AdminProductsApi {
     private final ProductService productService;
     private final PagedProductDtoToProductPageMapper pagedProductDtoToProductPageMapper;
     private final ProductDetailDtoToProductDetailMapper productDetailDtoToProductDetailMapper;
+    private final ProductCreateRequestToProductCreateRequestDtoMapper productCreateRequestToProductCreateRequestDtoMapper;
 
     public ProductController(ProductService productService,
                              PagedProductDtoToProductPageMapper pagedProductDtoToProductPageMapper,
-                             ProductDetailDtoToProductDetailMapper productDetailDtoToProductDetailMapper) {
+                             ProductDetailDtoToProductDetailMapper productDetailDtoToProductDetailMapper,
+                             ProductCreateRequestToProductCreateRequestDtoMapper productCreateRequestToProductCreateRequestDtoMapper) {
         this.productService = productService;
         this.pagedProductDtoToProductPageMapper = pagedProductDtoToProductPageMapper;
         this.productDetailDtoToProductDetailMapper = productDetailDtoToProductDetailMapper;
+        this.productCreateRequestToProductCreateRequestDtoMapper = productCreateRequestToProductCreateRequestDtoMapper;
     }
 
     @Override
@@ -72,6 +77,15 @@ public class ProductController implements ProductsApi, AdminProductsApi {
                 sortField, sortDirection, page, pageSize
         );
         return ResponseEntity.ok(pagedProductDtoToProductPageMapper.map(result));
+    }
+
+    @Override
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ProductDetail> createAdminProduct(ProductCreateRequest req) {
+        ProductDetailDto detail = productService.create(
+                productCreateRequestToProductCreateRequestDtoMapper.map(req)
+        );
+        return ResponseEntity.ok(productDetailDtoToProductDetailMapper.map(detail));
     }
 
     private static Boolean toActive(ProductArchiveStatusFilter archiveStatus) {
