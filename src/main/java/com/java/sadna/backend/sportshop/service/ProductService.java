@@ -6,6 +6,7 @@ import com.java.sadna.backend.sportshop.entity.CategoryEntity;
 import com.java.sadna.backend.sportshop.entity.ProductEntity;
 import com.java.sadna.backend.sportshop.entity.ProductStockEntity;
 import com.java.sadna.backend.sportshop.exception.BadRequestException;
+import com.java.sadna.backend.sportshop.exception.ConflictException;
 import com.java.sadna.backend.sportshop.exception.NotFoundException;
 import com.java.sadna.backend.sportshop.mapper.ProductEntityToProductDtoMapper;
 import com.java.sadna.backend.sportshop.mapper.ProductStockEntityToProductSizeDtoMapper;
@@ -15,17 +16,20 @@ import com.java.sadna.backend.sportshop.model.ProductDetailDto;
 import com.java.sadna.backend.sportshop.model.ProductDto;
 import com.java.sadna.backend.sportshop.model.ProductSizeDto;
 import com.java.sadna.backend.sportshop.model.ProductStockInputDto;
+import com.java.sadna.backend.sportshop.model.ProductUpdateRequestDto;
 import com.java.sadna.backend.sportshop.model.enums.ResourceImagePolicy;
 import com.java.sadna.backend.sportshop.repository.CategoryRepository;
 import com.java.sadna.backend.sportshop.repository.ProductRepository;
 import com.java.sadna.backend.sportshop.repository.ProductStockRepository;
 import com.java.sadna.backend.sportshop.repository.specification.ProductSpecifications;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -44,6 +48,7 @@ public class ProductService {
     private static final int DEFAULT_PAGE_SIZE = 9;
     private static final String ONE_SIZE_TOKEN = "ONE_SIZE";
     private static final int SIZE_TOKEN_MAX_LENGTH = 20;
+    private static final String VERSION_MISMATCH_MESSAGE = "Product version mismatch — refresh and retry.";
 
     private final ProductRepository productRepository;
     private final CategoryRepository categoryRepository;
@@ -126,20 +131,99 @@ public class ProductService {
         return getById(productId);
     }
 
+    @Transactional
+    public ProductDetailDto update(Long productId, ProductUpdateRequestDto input, Long actorId) {
+        ProductEntity product = productRepository.findById(productId)
+                .orElseThrow(() -> new NotFoundException("Product " + productId + " not found."));
+        if (product.getVersion() != input.getVersion()) {
+            throw new ConflictException(VERSION_MISMATCH_MESSAGE);
+        }
+        boolean wasMultiSize = product.isMultiSize();
+
+        categoryService.assertActiveForProductWrite(input.getCategoryId());
+        String imageFilename = parseProductImageFilenameOrThrow(input.getImageUrl());
+
+        OffsetDateTime now = OffsetDateTime.now();
+        product.setName(input.getName());
+        product.setDescription(input.getDescription());
+        product.setCategoryId(input.getCategoryId());
+        product.setMultiSize(input.isMultiSize());
+        product.setImageFilename(imageFilename);
+        product.setPrice(input.getPrice());
+        product.setUpdatedAt(now);
+        product.setUpdatedBy(actorId);
+        saveWithVersionGuard(product);
+
+        if (wasMultiSize != input.isMultiSize()) {
+            productStockRepository.deleteAllByProductId(productId);
+            if (!input.isMultiSize()) {
+                productStockRepository.save(new ProductStockEntity(productId, ONE_SIZE_TOKEN, 0, null));
+            }
+        }
+
+        return getById(productId);
+    }
+
+    @Transactional
+    public ProductDetailDto archive(Long productId, int loadedVersion, Long actorId) {
+        ProductEntity product = productRepository.findById(productId)
+                .orElseThrow(() -> new NotFoundException("Product " + productId + " not found."));
+        if (product.isArchived() || product.getVersion() != loadedVersion) {
+            throw new ConflictException(VERSION_MISMATCH_MESSAGE);
+        }
+
+        OffsetDateTime now = OffsetDateTime.now();
+        product.setArchived(true);
+        product.setArchivedAt(now);
+        product.setArchivedBy(actorId);
+        product.setUpdatedAt(now);
+        product.setUpdatedBy(actorId);
+        saveWithVersionGuard(product);
+
+        return getById(productId);
+    }
+
+    @Transactional
+    public ProductDetailDto restore(Long productId, int loadedVersion, Long actorId) {
+        ProductEntity product = productRepository.findById(productId)
+                .orElseThrow(() -> new NotFoundException("Product " + productId + " not found."));
+        if (!product.isArchived() || product.getVersion() != loadedVersion) {
+            throw new ConflictException(VERSION_MISMATCH_MESSAGE);
+        }
+
+        OffsetDateTime now = OffsetDateTime.now();
+        product.setArchived(false);
+        product.setArchivedAt(null);
+        product.setArchivedBy(null);
+        product.setUpdatedAt(now);
+        product.setUpdatedBy(actorId);
+        saveWithVersionGuard(product);
+
+        return getById(productId);
+    }
+
+    private void saveWithVersionGuard(ProductEntity product) {
+        try {
+            productRepository.saveAndFlush(product);
+        } catch (OptimisticLockingFailureException ex) {
+            throw new ConflictException(VERSION_MISMATCH_MESSAGE);
+        }
+    }
+
     @Transactional(readOnly = true)
     public ProductDetailDto getById(Long id) {
-        // Archived products are hidden from the Product Details page — same surface as
-        // a missing row, so we collapse both to a single 404 via NotFoundException.
         ProductEntity productEntity = productRepository.findById(id)
-                .filter(p -> !p.isArchived())
                 .orElseThrow(() -> new NotFoundException("Product " + id + " not found."));
+        return buildDetailDto(productEntity);
+    }
 
+    private ProductDetailDto buildDetailDto(ProductEntity productEntity) {
         String categoryName = categoryRepository.findById(productEntity.getCategoryId())
                 .map(CategoryEntity::getName)
                 .orElse(null);
 
         List<ProductSizeDto> sizes = productStockRepository
-                .findByProductId(id)
+                .findByProductId(productEntity.getId())
                 .stream()
                 .map(productStockEntityToProductSizeDtoMapper::map)
                 .toList();

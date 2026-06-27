@@ -88,7 +88,9 @@ public class CategoryService {
         if (replacementCategoryId.equals(id)) {
             throw new BadRequestException(REPLACEMENT_SAME_AS_TARGET_MESSAGE);
         }
-        CategoryEntity source = categoryRepository.findById(id)
+        // X-lock the source up front to drain concurrent product updates and avoid the
+        // bulkReassign-X-on-P + applySoftDelete-X-on-C deadlock.
+        CategoryEntity source = categoryRepository.findByIdWithWriteLock(id)
                 .orElseThrow(() -> new NotFoundException(CATEGORY_NOT_FOUND_MESSAGE));
         if (source.isDeleted()) {
             throw new ConflictException(CATEGORY_ALREADY_DELETED_MESSAGE);

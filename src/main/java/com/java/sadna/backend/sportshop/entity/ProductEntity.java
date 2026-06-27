@@ -56,16 +56,16 @@ public class ProductEntity {
     @Column(name = "is_archived", nullable = false)
     private boolean archived;
 
-    @Column(name = "updated_at", insertable = false, updatable = false)
+    @Column(name = "updated_at")
     private OffsetDateTime updatedAt;
 
-    @Column(name = "updated_by", insertable = false, updatable = false)
+    @Column(name = "updated_by")
     private Long updatedBy;
 
-    @Column(name = "archived_at", insertable = false, updatable = false)
+    @Column(name = "archived_at")
     private OffsetDateTime archivedAt;
 
-    @Column(name = "archived_by", insertable = false, updatable = false)
+    @Column(name = "archived_by")
     private Long archivedBy;
 
     protected ProductEntity() {
@@ -135,5 +135,49 @@ public class ProductEntity {
 
     public Long getArchivedBy() {
         return archivedBy;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public void setCategoryId(Long categoryId) {
+        this.categoryId = categoryId;
+    }
+
+    public void setMultiSize(boolean multiSize) {
+        this.multiSize = multiSize;
+    }
+
+    public void setImageFilename(String imageFilename) {
+        this.imageFilename = imageFilename;
+    }
+
+    public void setPrice(BigDecimal price) {
+        this.price = price;
+    }
+
+    public void setArchived(boolean archived) {
+        this.archived = archived;
+    }
+
+    public void setUpdatedAt(OffsetDateTime updatedAt) {
+        this.updatedAt = updatedAt;
+    }
+
+    public void setUpdatedBy(Long updatedBy) {
+        this.updatedBy = updatedBy;
+    }
+
+    public void setArchivedAt(OffsetDateTime archivedAt) {
+        this.archivedAt = archivedAt;
+    }
+
+    public void setArchivedBy(Long archivedBy) {
+        this.archivedBy = archivedBy;
     }
 }

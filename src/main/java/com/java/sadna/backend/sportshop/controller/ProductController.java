@@ -5,13 +5,18 @@ import com.java.sadna.backend.sportshop.api.generated.products.api.ProductsApi;
 import com.java.sadna.backend.sportshop.api.generated.products.model.ProductArchiveStatusFilter;
 import com.java.sadna.backend.sportshop.api.generated.products.model.ProductCreateRequest;
 import com.java.sadna.backend.sportshop.api.generated.products.model.ProductDetail;
+import com.java.sadna.backend.sportshop.api.generated.products.model.ProductLifecycleRequest;
 import com.java.sadna.backend.sportshop.api.generated.products.model.ProductPage;
+import com.java.sadna.backend.sportshop.api.generated.products.model.ProductUpdateRequest;
+import com.java.sadna.backend.sportshop.exception.NotFoundException;
 import com.java.sadna.backend.sportshop.mapper.PagedProductDtoToProductPageMapper;
 import com.java.sadna.backend.sportshop.mapper.ProductCreateRequestToProductCreateRequestDtoMapper;
 import com.java.sadna.backend.sportshop.mapper.ProductDetailDtoToProductDetailMapper;
+import com.java.sadna.backend.sportshop.mapper.ProductUpdateRequestToProductUpdateRequestDtoMapper;
 import com.java.sadna.backend.sportshop.model.PagedResult;
 import com.java.sadna.backend.sportshop.model.ProductDetailDto;
 import com.java.sadna.backend.sportshop.model.ProductDto;
+import com.java.sadna.backend.sportshop.security.SecurityContextUtils;
 import com.java.sadna.backend.sportshop.service.ProductService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -27,15 +32,18 @@ public class ProductController implements ProductsApi, AdminProductsApi {
     private final PagedProductDtoToProductPageMapper pagedProductDtoToProductPageMapper;
     private final ProductDetailDtoToProductDetailMapper productDetailDtoToProductDetailMapper;
     private final ProductCreateRequestToProductCreateRequestDtoMapper productCreateRequestToProductCreateRequestDtoMapper;
+    private final ProductUpdateRequestToProductUpdateRequestDtoMapper productUpdateRequestToProductUpdateRequestDtoMapper;
 
     public ProductController(ProductService productService,
                              PagedProductDtoToProductPageMapper pagedProductDtoToProductPageMapper,
                              ProductDetailDtoToProductDetailMapper productDetailDtoToProductDetailMapper,
-                             ProductCreateRequestToProductCreateRequestDtoMapper productCreateRequestToProductCreateRequestDtoMapper) {
+                             ProductCreateRequestToProductCreateRequestDtoMapper productCreateRequestToProductCreateRequestDtoMapper,
+                             ProductUpdateRequestToProductUpdateRequestDtoMapper productUpdateRequestToProductUpdateRequestDtoMapper) {
         this.productService = productService;
         this.pagedProductDtoToProductPageMapper = pagedProductDtoToProductPageMapper;
         this.productDetailDtoToProductDetailMapper = productDetailDtoToProductDetailMapper;
         this.productCreateRequestToProductCreateRequestDtoMapper = productCreateRequestToProductCreateRequestDtoMapper;
+        this.productUpdateRequestToProductUpdateRequestDtoMapper = productUpdateRequestToProductUpdateRequestDtoMapper;
     }
 
     @Override
@@ -57,6 +65,9 @@ public class ProductController implements ProductsApi, AdminProductsApi {
     @Override
     public ResponseEntity<ProductDetail> getProduct(Long id) {
         ProductDetailDto detail = productService.getById(id);
+        if (detail.getProduct().isArchived() && !SecurityContextUtils.currentUserIsAdmin()) {
+            throw new NotFoundException("Product " + id + " not found.");
+        }
         return ResponseEntity.ok(productDetailDtoToProductDetailMapper.map(detail));
     }
 
@@ -84,6 +95,35 @@ public class ProductController implements ProductsApi, AdminProductsApi {
     public ResponseEntity<ProductDetail> createAdminProduct(ProductCreateRequest req) {
         ProductDetailDto detail = productService.create(
                 productCreateRequestToProductCreateRequestDtoMapper.map(req)
+        );
+        return ResponseEntity.ok(productDetailDtoToProductDetailMapper.map(detail));
+    }
+
+    @Override
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ProductDetail> updateAdminProduct(Long id, ProductUpdateRequest req) {
+        ProductDetailDto detail = productService.update(
+                id,
+                productUpdateRequestToProductUpdateRequestDtoMapper.map(req),
+                SecurityContextUtils.currentUserIdOrThrow()
+        );
+        return ResponseEntity.ok(productDetailDtoToProductDetailMapper.map(detail));
+    }
+
+    @Override
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ProductDetail> archiveAdminProduct(Long id, ProductLifecycleRequest req) {
+        ProductDetailDto detail = productService.archive(
+                id, req.getVersion(), SecurityContextUtils.currentUserIdOrThrow()
+        );
+        return ResponseEntity.ok(productDetailDtoToProductDetailMapper.map(detail));
+    }
+
+    @Override
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ProductDetail> restoreAdminProduct(Long id, ProductLifecycleRequest req) {
+        ProductDetailDto detail = productService.restore(
+                id, req.getVersion(), SecurityContextUtils.currentUserIdOrThrow()
         );
         return ResponseEntity.ok(productDetailDtoToProductDetailMapper.map(detail));
     }

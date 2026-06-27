@@ -18,6 +18,12 @@ public interface CategoryRepository extends JpaRepository<CategoryEntity, Long> 
     @Query("SELECT c FROM CategoryEntity c WHERE c.id = :id")
     Optional<CategoryEntity> findByIdWithLock(@Param("id") Long id);
 
+    // exclusive-locks the row; softDelete grabs this BEFORE bulkReassign to avoid the
+    // X-on-products + X-on-category deadlock with concurrent product updates.
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT c FROM CategoryEntity c WHERE c.id = :id")
+    Optional<CategoryEntity> findByIdWithWriteLock(@Param("id") Long id);
+
     @Modifying(clearAutomatically = true)
     @Query("""
             UPDATE CategoryEntity c

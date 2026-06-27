@@ -13,6 +13,13 @@ public interface ProductStockRepository extends JpaRepository<ProductStockEntity
 
     List<ProductStockEntity> findByProductId(Long productId);
 
+    // Bulk delete used by the isMultiSize-flip cascade during ProductService.update — wipes all
+    // per-size rows in a single statement; the caller then re-inserts the single ONE_SIZE row
+    // when the new mode is single-size.
+    @Modifying(clearAutomatically = true)
+    @Query("DELETE FROM ProductStockEntity ps WHERE ps.productId = :productId")
+    int deleteAllByProductId(@Param("productId") Long productId);
+
     // Race-safe stock deduct used inside the checkout transaction. Atomically validates
     // stock + archive + version in one UPDATE -- 0 rows means the line lost the race (any
     // sub-cause: stock dropped, product archived, or version bumped). The caller treats
