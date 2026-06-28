@@ -1,6 +1,7 @@
 package com.java.sadna.backend.sportshop.model;
 
 import java.math.BigDecimal;
+import java.time.OffsetDateTime;
 
 public class ProductDto implements BaseDto {
 
@@ -12,6 +13,11 @@ public class ProductDto implements BaseDto {
     private final String imageFilename;
     private final BigDecimal price;
     private final int version;
+    private final boolean archived;
+    private final OffsetDateTime updatedAt;
+    private final Long updatedBy;
+    private final OffsetDateTime archivedAt;
+    private final Long archivedBy;
 
     public ProductDto(Long id,
                       String name,
@@ -20,7 +26,12 @@ public class ProductDto implements BaseDto {
                       boolean multiSize,
                       String imageFilename,
                       BigDecimal price,
-                      int version) {
+                      int version,
+                      boolean archived,
+                      OffsetDateTime updatedAt,
+                      Long updatedBy,
+                      OffsetDateTime archivedAt,
+                      Long archivedBy) {
         this.id = id;
         this.name = name;
         this.description = description;
@@ -29,6 +40,11 @@ public class ProductDto implements BaseDto {
         this.imageFilename = imageFilename;
         this.price = price;
         this.version = version;
+        this.archived = archived;
+        this.updatedAt = updatedAt;
+        this.updatedBy = updatedBy;
+        this.archivedAt = archivedAt;
+        this.archivedBy = archivedBy;
     }
 
     public Long getId() {
@@ -61,5 +77,25 @@ public class ProductDto implements BaseDto {
 
     public int getVersion() {
         return version;
+    }
+
+    public boolean isArchived() {
+        return archived;
+    }
+
+    public OffsetDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public Long getUpdatedBy() {
+        return updatedBy;
+    }
+
+    public OffsetDateTime getArchivedAt() {
+        return archivedAt;
+    }
+
+    public Long getArchivedBy() {
+        return archivedBy;
     }
 }

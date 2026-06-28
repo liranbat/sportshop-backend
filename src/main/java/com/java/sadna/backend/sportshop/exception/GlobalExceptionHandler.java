@@ -19,6 +19,7 @@ import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
 
@@ -143,6 +144,18 @@ public class GlobalExceptionHandler {
             headers.setAllow(e.getSupportedHttpMethods());
         }
         return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED).headers(headers).body(body);
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ApiError> handleMaxUploadSize(MaxUploadSizeExceededException e) {
+        log.debug("Multipart upload exceeded the configured size cap: {}", e.getMessage());
+        ApiError body = new ApiError(
+                OffsetDateTime.now(),
+                currentTraceId(),
+                "IMAGE_FILE_TOO_LARGE",
+                "Uploaded file exceeds the maximum allowed size."
+        );
+        return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE).body(body);
     }
 
     @ExceptionHandler(HttpMediaTypeNotSupportedException.class)

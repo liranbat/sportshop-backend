@@ -1,5 +1,7 @@
 package com.java.sadna.backend.sportshop.model;
 
+import com.java.sadna.backend.sportshop.model.enums.StockState;
+
 public class ProductSizeDto implements BaseDto {
 
     private final String size;

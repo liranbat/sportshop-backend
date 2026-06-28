@@ -8,11 +8,17 @@ import org.springframework.stereotype.Component;
 public class CategoryEntityToCategoryDtoMapper implements BaseMapper<CategoryEntity, CategoryDto> {
 
     @Override
-    public CategoryDto map(CategoryEntity categoryEntity) {
+    public CategoryDto map(CategoryEntity entity) {
         return new CategoryDto(
-                categoryEntity.getId(),
-                categoryEntity.getName(),
-                categoryEntity.getIconFilename()
+                entity.getId(),
+                entity.getName(),
+                entity.getIconFilename(),
+                entity.isDeleted(),
+                entity.getCreatedAt(),
+                entity.getDeletedAt(),
+                entity.getDeletedBy(),
+                entity.getUpdatedAt(),
+                entity.getUpdatedBy()
         );
     }
 }

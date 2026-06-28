@@ -2,7 +2,7 @@ package com.java.sadna.backend.sportshop.mapper;
 
 import com.java.sadna.backend.sportshop.entity.ProductStockEntity;
 import com.java.sadna.backend.sportshop.model.ProductSizeDto;
-import com.java.sadna.backend.sportshop.model.StockState;
+import com.java.sadna.backend.sportshop.model.enums.StockState;
 import org.springframework.stereotype.Component;
 
 @Component

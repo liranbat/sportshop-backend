@@ -26,6 +26,9 @@ public class CategoryEntity {
     @Column(name = "is_deleted", nullable = false)
     private boolean deleted;
 
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private OffsetDateTime createdAt;
+
     @Column(name = "updated_at", insertable = false, updatable = false)
     private OffsetDateTime updatedAt;
 
@@ -39,6 +42,13 @@ public class CategoryEntity {
     private Long deletedBy;
 
     protected CategoryEntity() {
+    }
+
+    public CategoryEntity(String name, String iconFilename) {
+        this.name = name;
+        this.iconFilename = iconFilename;
+        this.deleted = false;
+        this.createdAt = OffsetDateTime.now();
     }
 
     public Long getId() {
@@ -55,6 +65,10 @@ public class CategoryEntity {
 
     public boolean isDeleted() {
         return deleted;
+    }
+
+    public OffsetDateTime getCreatedAt() {
+        return createdAt;
     }
 
     public OffsetDateTime getUpdatedAt() {

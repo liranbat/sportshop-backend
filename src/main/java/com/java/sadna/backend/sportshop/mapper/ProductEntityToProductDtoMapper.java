@@ -17,7 +17,12 @@ public class ProductEntityToProductDtoMapper implements BaseMapper<ProductEntity
                 productEntity.isMultiSize(),
                 productEntity.getImageFilename(),
                 productEntity.getPrice(),
-                productEntity.getVersion()
+                productEntity.getVersion(),
+                productEntity.isArchived(),
+                productEntity.getUpdatedAt(),
+                productEntity.getUpdatedBy(),
+                productEntity.getArchivedAt(),
+                productEntity.getArchivedBy()
         );
     }
 }
