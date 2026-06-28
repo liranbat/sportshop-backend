@@ -25,6 +25,11 @@ public class ProductDtoToProductMapper implements BaseMapper<ProductDto, Product
                 .isMultiSize(product.isMultiSize())
                 .imageUrl(imagesProperties.getProductImageUrl(product.getImageFilename()))
                 .price(product.getPrice())
-                .version(product.getVersion());
+                .version(product.getVersion())
+                .isArchived(product.isArchived())
+                .updatedAt(product.getUpdatedAt())
+                .updatedBy(product.getUpdatedBy())
+                .archivedAt(product.getArchivedAt())
+                .archivedBy(product.getArchivedBy());
     }
 }

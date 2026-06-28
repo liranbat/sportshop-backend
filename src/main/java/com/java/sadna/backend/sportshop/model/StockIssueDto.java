@@ -1,18 +1,20 @@
 package com.java.sadna.backend.sportshop.model;
 
+import com.java.sadna.backend.sportshop.model.enums.StockIssueKind;
+
 public class StockIssueDto implements BaseDto {
 
     private final Long productId;
     private final String productName;
     private final String size;
-    private final StockIssueKindDto kind;
+    private final StockIssueKind kind;
     private final int availableStock;
     private final int requestedQuantity;
 
     public StockIssueDto(Long productId,
                          String productName,
                          String size,
-                         StockIssueKindDto kind,
+                         StockIssueKind kind,
                          int availableStock,
                          int requestedQuantity) {
         this.productId = productId;
@@ -35,7 +37,7 @@ public class StockIssueDto implements BaseDto {
         return size;
     }
 
-    public StockIssueKindDto getKind() {
+    public StockIssueKind getKind() {
         return kind;
     }
 

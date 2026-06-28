@@ -2,6 +2,12 @@ spring:
   application:
     name: sportshop
 
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 12MB
+      max-request-size: 12MB
+
   datasource:
     url: jdbc:postgresql://${SPORTSHOP_DB_HOST:localhost}:${SPORTSHOP_DB_PORT:5432}/${SPORTSHOP_DB_NAME:sportshop}?currentSchema=${SPORTSHOP_DB_SCHEMA:sportshop}
     username: ${SPORTSHOP_DB_USER:sportshop_app}
@@ -31,10 +37,12 @@ app:
   cors:
     allowed-origins: ${SPORTSHOP_CORS_ALLOWED_ORIGINS:http://localhost:5173}
   images:
+    public-base-url: ${SPORTSHOP_PUBLIC_BASE_URL:http://localhost:8080}
     url-prefix: images
     category-prefix: categories
     product-prefix: products
     local-dir: ${SPORTSHOP_IMAGES_LOCAL_DIR:../../images}
+    cache-ttl-seconds: ${SPORTSHOP_IMAGES_CACHE_TTL_SECONDS:604800}
   auth:
     secret: ${SPORTSHOP_JWT_SECRET}
     access-token-ttl: ${SPORTSHOP_ACCESS_TOKEN_TTL:PT15M}

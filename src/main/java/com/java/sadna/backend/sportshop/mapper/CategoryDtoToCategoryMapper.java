@@ -16,11 +16,17 @@ public class CategoryDtoToCategoryMapper implements BaseMapper<CategoryDto, Cate
     }
 
     @Override
-    public Category map(CategoryDto category) {
+    public Category map(CategoryDto dto) {
         return new Category(
-                category.getId(),
-                category.getName(),
-                imagesProperties.getCategoryIconUrl(category.getIconFilename())
-        );
+                dto.getId(),
+                dto.getName(),
+                imagesProperties.getCategoryIconUrl(dto.getIconFilename()),
+                dto.isDeleted(),
+                dto.getCreatedAt()
+        )
+                .deletedAt(dto.getDeletedAt())
+                .deletedBy(dto.getDeletedBy())
+                .updatedAt(dto.getUpdatedAt())
+                .updatedBy(dto.getUpdatedBy());
     }
 }

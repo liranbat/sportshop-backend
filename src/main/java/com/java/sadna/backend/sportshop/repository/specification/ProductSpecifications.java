@@ -16,6 +16,11 @@ public final class ProductSpecifications {
         return (root, query, cb) -> cb.equal(root.get("archived"), !active);
     }
 
+    public static Specification<ProductEntity> isMultiSize(Boolean isMultiSize) {
+        if (isMultiSize == null) return null;
+        return (root, query, cb) -> cb.equal(root.get("multiSize"), isMultiSize);
+    }
+
     public static Specification<ProductEntity> nameContainsIgnoreCase(String search) {
         if (search == null) return null;
         String trimmed = search.trim();
