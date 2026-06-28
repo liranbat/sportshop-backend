@@ -56,7 +56,7 @@ public class ProductController implements ProductsApi, AdminProductsApi {
                                                     Integer page,
                                                     Integer pageSize) {
         PagedResult<ProductDto> result = productService.list(
-                Boolean.TRUE, search, categoryIds, priceMin, priceMax,
+                Boolean.TRUE, null, search, categoryIds, priceMin, priceMax,
                 sortField, sortDirection, page, pageSize
         );
         return ResponseEntity.ok(pagedProductDtoToProductPageMapper.map(result));
@@ -74,6 +74,7 @@ public class ProductController implements ProductsApi, AdminProductsApi {
     @Override
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ProductPage> listAdminProducts(ProductArchiveStatusFilter archiveStatus,
+                                                         Boolean isMultiSize,
                                                          String search,
                                                          List<Long> categoryIds,
                                                          BigDecimal priceMin,
@@ -84,7 +85,7 @@ public class ProductController implements ProductsApi, AdminProductsApi {
                                                          Integer pageSize) {
         Boolean active = toActive(archiveStatus);
         PagedResult<ProductDto> result = productService.list(
-                active, search, categoryIds, priceMin, priceMax,
+                active, isMultiSize, search, categoryIds, priceMin, priceMax,
                 sortField, sortDirection, page, pageSize
         );
         return ResponseEntity.ok(pagedProductDtoToProductPageMapper.map(result));

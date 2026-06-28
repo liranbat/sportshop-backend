@@ -79,6 +79,7 @@ public class ProductService {
 
     @Transactional(readOnly = true)
     public PagedResult<ProductDto> list(Boolean active,
+                                        Boolean isMultiSize,
                                         String search,
                                         List<Long> categoryIds,
                                         BigDecimal priceMin,
@@ -89,6 +90,7 @@ public class ProductService {
                                         Integer pageSize) {
         Specification<ProductEntity> spec = Specification.allOf(
                 ProductSpecifications.active(active),
+                ProductSpecifications.isMultiSize(isMultiSize),
                 ProductSpecifications.nameContainsIgnoreCase(search),
                 ProductSpecifications.categoryIdIn(categoryIds),
                 ProductSpecifications.priceGte(priceMin),
