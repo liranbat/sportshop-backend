@@ -22,6 +22,13 @@
 		<spring-dotenv.version>5.1.0</spring-dotenv.version>
 		<jjwt.version>0.12.6</jjwt.version>
 		<tika.version>3.2.3</tika.version>
+		<maven-enforcer-plugin.version>3.5.0</maven-enforcer-plugin.version>
+		<!-- Floor for the host's Maven version (no wrapper on purpose). Buildpacks
+		     bring their own Maven/JDK inside the image, but the host Maven still
+		     drives openapi-generator + spring-boot:build-image orchestration, so
+		     a too-old Maven can silently break the build. 4.0.0 is excluded
+		     because Maven 4 has breaking changes for several plugins we use. -->
+		<required-maven.version>[3.9.16,4.0.0)</required-maven.version>
 		<openapi.specs.dir>${project.basedir}/../../sportshop-swagger</openapi.specs.dir>
 		<openapi.specs.staged>${project.build.directory}/openapi</openapi.specs.staged>
 	</properties>
@@ -128,9 +135,44 @@
 
 	<build>
 		<plugins>
+			<!-- Pin the host Maven version so the buildpack image is reproducible
+			     across machines. No wrapper is shipped (by design); developers
+			     must install Maven 3.9.16+ themselves, and this enforcer fails
+			     the build early with a clear message if the version is wrong. -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-enforcer-plugin</artifactId>
+				<version>${maven-enforcer-plugin.version}</version>
+				<executions>
+					<execution>
+						<id>enforce-maven-and-java</id>
+						<goals>
+							<goal>enforce</goal>
+						</goals>
+						<configuration>
+							<rules>
+								<requireMavenVersion>
+									<version>${required-maven.version}</version>
+									<message>Maven ${required-maven.version} required. Install 3.9.16 or newer 3.9.x (Maven 4 is not yet supported).</message>
+								</requireMavenVersion>
+								<requireJavaVersion>
+									<version>[${java.version},)</version>
+									<message>Java ${java.version}+ required.</message>
+								</requireJavaVersion>
+							</rules>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
+				<configuration>
+					<image>
+						<name>sportshop-backend:${project.version}</name>
+					</image>
+				</configuration>
 			</plugin>
 
 			<plugin>

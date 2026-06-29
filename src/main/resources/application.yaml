@@ -34,10 +34,11 @@ management:
       probability: 1.0
 
 app:
+  api:
+    path-prefix: /api
   cors:
     allowed-origins: ${SPORTSHOP_CORS_ALLOWED_ORIGINS:http://localhost:5173}
   images:
-    public-base-url: ${SPORTSHOP_PUBLIC_BASE_URL:http://localhost:8080}
     url-prefix: images
     category-prefix: categories
     product-prefix: products
