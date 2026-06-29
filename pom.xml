@@ -171,6 +171,8 @@
 				<configuration>
 					<image>
 						<name>sportshop-backend:${project.version}</name>
+						<!-- -full ships curl; needed by the docker healthcheck. -->
+						<runImage>paketobuildpacks/run-jammy-full</runImage>
 					</image>
 				</configuration>
 			</plugin>
