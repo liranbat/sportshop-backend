@@ -22,7 +22,7 @@
 		<spring-dotenv.version>5.1.0</spring-dotenv.version>
 		<jjwt.version>0.12.6</jjwt.version>
 		<tika.version>3.2.3</tika.version>
-		<openapi.specs.dir>${project.basedir}/../sportshop-swagger</openapi.specs.dir>
+		<sportshop-swagger.version>feature-ci.1.0.1</sportshop-swagger.version>
 		<openapi.specs.staged>${project.build.directory}/openapi</openapi.specs.staged>
 	</properties>
 
@@ -142,25 +142,25 @@
 
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-resources-plugin</artifactId>
+				<artifactId>maven-antrun-plugin</artifactId>
 				<executions>
 					<execution>
-						<id>stage-openapi-specs</id>
+						<id>fetch-openapi-specs</id>
 						<phase>initialize</phase>
 						<goals>
-							<goal>copy-resources</goal>
+							<goal>run</goal>
 						</goals>
 						<configuration>
-							<outputDirectory>${openapi.specs.staged}</outputDirectory>
-							<resources>
-								<resource>
-									<directory>${openapi.specs.dir}</directory>
-									<includes>
-										<include>*-api.yaml</include>
-									</includes>
-									<filtering>false</filtering>
-								</resource>
-							</resources>
+							<target>
+								<mkdir dir="${openapi.specs.staged}"/>
+								<get src="https://github.com/liranbat/sportshop-swagger/releases/download/${sportshop-swagger.version}/sportshop-swagger-${sportshop-swagger.version}.zip"
+								     dest="${project.build.directory}/sportshop-swagger.zip"
+								     verbose="true"
+								     usetimestamp="true"/>
+								<unzip src="${project.build.directory}/sportshop-swagger.zip"
+								       dest="${openapi.specs.staged}"
+								       overwrite="true"/>
+							</target>
 						</configuration>
 					</execution>
 				</executions>
@@ -375,5 +375,53 @@
 			</plugin>
 		</plugins>
 	</build>
+
+	<profiles>
+		<!-- -Plocal-specs: source YAMLs from ../sportshop-swagger/ instead of the release zip. -->
+		<profile>
+			<id>local-specs</id>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-antrun-plugin</artifactId>
+						<executions>
+							<execution>
+								<!-- Override: matching id + phase=none disables the inherited fetch execution. -->
+								<id>fetch-openapi-specs</id>
+								<phase>none</phase>
+							</execution>
+						</executions>
+					</plugin>
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-resources-plugin</artifactId>
+						<executions>
+							<execution>
+								<id>stage-local-openapi-specs</id>
+								<phase>initialize</phase>
+								<goals>
+									<goal>copy-resources</goal>
+								</goals>
+								<configuration>
+									<outputDirectory>${openapi.specs.staged}</outputDirectory>
+									<resources>
+										<resource>
+											<directory>${project.basedir}/../sportshop-swagger</directory>
+											<includes>
+												<include>*.yaml</include>
+												<include>*.yml</include>
+											</includes>
+											<filtering>false</filtering>
+										</resource>
+									</resources>
+								</configuration>
+							</execution>
+						</executions>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+	</profiles>
 
 </project>
