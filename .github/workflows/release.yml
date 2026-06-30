@@ -2,7 +2,7 @@ name: Release backend
 
 on:
   push:
-    branches: [main, feature-ci]
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -20,7 +20,7 @@ env:
 jobs:
   setup:
     name: Setup & version
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/feature-ci'
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.version.outputs.value }}
