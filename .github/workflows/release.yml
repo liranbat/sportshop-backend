@@ -106,9 +106,9 @@ jobs:
       - name: Build Docker image (Paketo)
         run: |
           mvn -B -ntp spring-boot:build-image -DskipTests \
-            -Dspring-boot.build-image.imageName="${IMAGE_REPO}:${{ needs.setup.outputs.version }}"
+            -Ddocker.image.name="${IMAGE_REPO}:${{ needs.setup.outputs.version }}"
 
-      - name: Push versioned + per-branch latest tags
+      - name: Tag + push versioned + per-branch latest
         run: |
           set -euo pipefail
           VERSION="${{ needs.setup.outputs.version }}"

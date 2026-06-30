@@ -24,6 +24,7 @@
 		<tika.version>3.2.3</tika.version>
 		<sportshop-swagger.version>feature-ci.1.0.1</sportshop-swagger.version>
 		<openapi.specs.staged>${project.build.directory}/openapi</openapi.specs.staged>
+		<docker.image.name>sportshop-backend:${project.version}</docker.image.name>
 	</properties>
 
 	<dependencyManagement>
@@ -133,7 +134,7 @@
 				<artifactId>spring-boot-maven-plugin</artifactId>
 				<configuration>
 					<image>
-						<name>sportshop-backend:${project.version}</name>
+						<name>${docker.image.name}</name>
 						<!-- -full ships curl; needed by the docker healthcheck. -->
 						<runImage>paketobuildpacks/run-noble-full</runImage>
 					</image>
