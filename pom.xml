@@ -22,7 +22,7 @@
 		<spring-dotenv.version>5.1.0</spring-dotenv.version>
 		<jjwt.version>0.12.6</jjwt.version>
 		<tika.version>3.2.3</tika.version>
-		<sportshop-swagger.version>main.1.0.1</sportshop-swagger.version>
+		<sportshop-swagger.version>main.1.0.3</sportshop-swagger.version>
 		<openapi.specs.staged>${project.build.directory}/openapi</openapi.specs.staged>
 	</properties>
 
