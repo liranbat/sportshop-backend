@@ -1,0 +1,9 @@
+# Whitelist: only the fat jar reaches the build context. Everything else
+# (src/, .git/, .idea/, target/classes/, generated sources, etc.) stays on
+# the host — keeps docker build fast and layers stable.
+*
+!.dockerignore
+!Dockerfile
+!target
+target/*
+!target/sportshop-*.jar
