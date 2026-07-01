@@ -25,19 +25,6 @@ public class CategoryService {
 
     private static final Logger log = LoggerFactory.getLogger(CategoryService.class);
 
-    private static final String CATEGORY_NOT_FOUND_MESSAGE = "Category not found.";
-    private static final String CATEGORY_ALREADY_DELETED_MESSAGE =
-            "This category is already deleted — another admin already deleted it.";
-    private static final String CATEGORY_NOT_DELETED_MESSAGE =
-            "This category is no longer deleted — another admin already restored it.";
-    private static final String REPLACEMENT_SAME_AS_TARGET_MESSAGE =
-            "Replacement category cannot be the category being deleted.";
-    private static final String REPLACEMENT_NOT_ACTIVE_MESSAGE =
-            "Replacement category does not exist or is itself soft-deleted.";
-    private static final String INVALID_ICON_URL_MESSAGE =
-            "Icon URL is not a valid category icon URL produced by the upload pipeline.";
-    private static final String INVALID_CATEGORY_ID_MESSAGE = "Invalid categoryId.";
-
     private static final Comparator<CategoryEntity> LIST_ORDER = Comparator
             .comparing(CategoryEntity::getName, String.CASE_INSENSITIVE_ORDER)
             .thenComparing(CategoryEntity::getId);
@@ -78,7 +65,7 @@ public class CategoryService {
         String iconFilename = parseIconFilenameOrThrow(iconUrl);
         int updated = categoryRepository.applyEdit(id, name, iconFilename, actorId, OffsetDateTime.now());
         if (updated == 0) {
-            throw new NotFoundException(CATEGORY_NOT_FOUND_MESSAGE);
+            throw new NotFoundException("category.notFound");
         }
         return loadCategoryByIdOrThrow(id);
     }
@@ -86,26 +73,26 @@ public class CategoryService {
     @Transactional
     public CategoryDto softDeleteCategory(Long id, Long replacementCategoryId, Long actorId) {
         if (replacementCategoryId.equals(id)) {
-            throw new BadRequestException(REPLACEMENT_SAME_AS_TARGET_MESSAGE);
+            throw new BadRequestException("category.replacementSameAsTarget");
         }
         // X-lock the source up front to drain concurrent product updates and avoid the
         // bulkReassign-X-on-P + applySoftDelete-X-on-C deadlock.
         CategoryEntity source = categoryRepository.findByIdWithWriteLock(id)
-                .orElseThrow(() -> new NotFoundException(CATEGORY_NOT_FOUND_MESSAGE));
+                .orElseThrow(() -> new NotFoundException("category.notFound"));
         if (source.isDeleted()) {
-            throw new ConflictException(CATEGORY_ALREADY_DELETED_MESSAGE);
+            throw new ConflictException("category.alreadyDeleted");
         }
         CategoryEntity replacement = categoryRepository.findByIdWithLock(replacementCategoryId)
-                .orElseThrow(() -> new BadRequestException(REPLACEMENT_NOT_ACTIVE_MESSAGE));
+                .orElseThrow(() -> new BadRequestException("category.replacementNotActive"));
         if (replacement.isDeleted()) {
-            throw new BadRequestException(REPLACEMENT_NOT_ACTIVE_MESSAGE);
+            throw new BadRequestException("category.replacementNotActive");
         }
         OffsetDateTime now = OffsetDateTime.now();
         int reassigned = productRepository.bulkReassignByCategoryId(id, replacementCategoryId, actorId, now);
         log.info("Category soft-delete: reassigned {} product(s) from category {} to {}", reassigned, id, replacementCategoryId);
         int updated = categoryRepository.applySoftDelete(id, actorId, now);
         if (updated == 0) {
-            throw new ConflictException(CATEGORY_ALREADY_DELETED_MESSAGE);
+            throw new ConflictException("category.alreadyDeleted");
         }
         return loadCategoryByIdOrThrow(id);
     }
@@ -115,23 +102,23 @@ public class CategoryService {
         int updated = categoryRepository.applyRestore(id, actorId, OffsetDateTime.now());
         if (updated == 0) {
             throw categoryRepository.existsById(id)
-                    ? new ConflictException(CATEGORY_NOT_DELETED_MESSAGE)
-                    : new NotFoundException(CATEGORY_NOT_FOUND_MESSAGE);
+                    ? new ConflictException("category.notDeleted")
+                    : new NotFoundException("category.notFound");
         }
         return loadCategoryByIdOrThrow(id);
     }
 
     public void assertActiveForProductWrite(Long categoryId) {
         CategoryEntity category = categoryRepository.findByIdWithLock(categoryId)
-                .orElseThrow(() -> new BadRequestException(INVALID_CATEGORY_ID_MESSAGE));
+                .orElseThrow(() -> new BadRequestException("category.invalidId"));
         if (category.isDeleted()) {
-            throw new ConflictException(CATEGORY_ALREADY_DELETED_MESSAGE);
+            throw new ConflictException("category.alreadyDeleted");
         }
     }
 
     private CategoryDto loadCategoryByIdOrThrow(Long id) {
         CategoryEntity entity = categoryRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException(CATEGORY_NOT_FOUND_MESSAGE));
+                .orElseThrow(() -> new NotFoundException("category.notFound"));
         return categoryEntityToCategoryDtoMapper.map(entity);
     }
 
@@ -139,7 +126,7 @@ public class CategoryService {
         try {
             return imagesProperties.parseFilename(ResourceImagePolicy.CATEGORIES, iconUrl);
         } catch (IllegalArgumentException e) {
-            throw new BadRequestException(INVALID_ICON_URL_MESSAGE);
+            throw new BadRequestException("category.invalidIconUrl");
         }
     }
 }

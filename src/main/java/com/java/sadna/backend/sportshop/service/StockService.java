@@ -89,13 +89,11 @@ public class StockService {
     @Transactional
     public StockRowDto adjustQuantity(Long productId, String size, int delta) {
         if (delta == 0) {
-            throw new BadRequestException("delta must be non-zero.");
+            throw new BadRequestException("stock.deltaNonZero");
         }
         int affected = productStockRepository.adminAdjust(productId, size, delta);
         if (affected == 0) {
-            throw new ConflictException(
-                    "Cannot adjust quantity by " + delta
-                            + ": stock row no longer exists or quantity would go below 0.");
+            throw new ConflictException("stock.adjustConflict", delta);
         }
         return readRowOrThrow(productId, size);
     }
@@ -104,20 +102,18 @@ public class StockService {
     public StockRowDto addSize(Long productId, String size, int quantity, Integer threshold) {
         String trimmed = size == null ? "" : size.trim();
         if (trimmed.isEmpty()) {
-            throw new BadRequestException("size must be non-blank.");
+            throw new BadRequestException("stock.sizeBlank");
         }
         if (ONE_SIZE_TOKEN.equals(trimmed)) {
-            throw new BadRequestException(
-                    "'" + ONE_SIZE_TOKEN + "' is reserved for single-size products.");
+            throw new BadRequestException("stock.oneSizeReserved", ONE_SIZE_TOKEN);
         }
 
         // SELECT FOR UPDATE on the product so a concurrent is_multi_size flip can't interleave
         // between our guard and the INSERT below.
         ProductEntity product = productRepository.findByIdWithLock(productId)
-                .orElseThrow(() -> new NotFoundException("Product " + productId + " not found."));
+                .orElseThrow(() -> new NotFoundException("product.notFound", productId));
         if (!product.isMultiSize()) {
-            throw new BadRequestException(
-                    "Product " + productId + " is single-size; cannot add additional sizes.");
+            throw new BadRequestException("stock.multiSize.cannotAdd", productId);
         }
         try {
             productStockRepository.adminInsert(productId, trimmed, quantity, threshold);
@@ -130,14 +126,12 @@ public class StockService {
     @Transactional
     public void removeSize(Long productId, String size) {
         if (ONE_SIZE_TOKEN.equals(size)) {
-            throw new BadRequestException(
-                    "'" + ONE_SIZE_TOKEN + "' cannot be removed.");
+            throw new BadRequestException("stock.oneSizeNotRemovable", ONE_SIZE_TOKEN);
         }
         ProductEntity product = productRepository.findById(productId)
-                .orElseThrow(() -> new NotFoundException("Product " + productId + " not found."));
+                .orElseThrow(() -> new NotFoundException("product.notFound", productId));
         if (!product.isMultiSize()) {
-            throw new BadRequestException(
-                    "Product " + productId + " is single-size; cannot remove sizes.");
+            throw new BadRequestException("stock.multiSize.cannotRemove", productId);
         }
         // Idempotent: 0 rows means the size was already removed; surface as success per swagger.
         productStockRepository.adminDelete(productId, size);
@@ -150,13 +144,11 @@ public class StockService {
     }
 
     private static NotFoundException stockRowNotFound(Long productId, String size) {
-        return new NotFoundException(
-                "Stock row for product " + productId + " size '" + size + "' not found.");
+        return new NotFoundException("stock.rowNotFound", productId, size);
     }
 
     private static ConflictException sizeAlreadyExists(Long productId, String size) {
-        return new ConflictException(
-                "Size '" + size + "' already exists for product " + productId + ".");
+        return new ConflictException("stock.sizeAlreadyExists", productId, size);
     }
 
     private Sort buildSort(String sortField, String sortDirection) {

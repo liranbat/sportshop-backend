@@ -5,13 +5,17 @@ import org.springframework.http.HttpStatus;
 public class ConflictException extends ApiException {
 
     private static final String CODE = "CONFLICT";
-    private static final String DEFAULT_MESSAGE = "The request conflicts with the current state.";
+    private static final String DEFAULT_KEY = "http.conflict.default";
 
     public ConflictException() {
-        super(HttpStatus.CONFLICT, CODE, DEFAULT_MESSAGE);
+        super(HttpStatus.CONFLICT, CODE, DEFAULT_KEY);
     }
 
-    public ConflictException(String message) {
-        super(HttpStatus.CONFLICT, CODE, message);
+    public ConflictException(String messageKey) {
+        super(HttpStatus.CONFLICT, CODE, messageKey);
+    }
+
+    public ConflictException(String messageKey, Object... args) {
+        super(HttpStatus.CONFLICT, CODE, messageKey, args);
     }
 }

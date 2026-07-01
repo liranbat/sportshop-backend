@@ -20,7 +20,7 @@ public class PaginationService {
     private int safePage(Integer page) {
         if (page == null) return 0;
         if (page < 0) {
-            throw new BadRequestException("page must be >= 0");
+            throw new BadRequestException("pagination.pageNegative");
         }
         return page;
     }
@@ -28,7 +28,7 @@ public class PaginationService {
     private int safePageSize(Integer pageSize, int defaultSize) {
         if (pageSize == null) return defaultSize;
         if (pageSize < 1) {
-            throw new BadRequestException("pageSize must be >= 1");
+            throw new BadRequestException("pagination.pageSizeMin");
         }
         return pageSize;
     }
@@ -57,8 +57,7 @@ public class PaginationService {
 
     private void ensurePageInRange(int page, int totalPages) {
         if (page > 0 && page >= totalPages) {
-            throw new NotFoundException(
-                    "page " + page + " does not exist (totalPages=" + totalPages + ")");
+            throw new NotFoundException("pagination.outOfRange", page, totalPages);
         }
     }
 }

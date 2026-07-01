@@ -78,6 +78,6 @@ public enum ResourceImagePolicy {
                 }
             }
         }
-        throw new BadRequestException("Invalid value '" + segment + "' for parameter 'resourceType'.");
+        throw new BadRequestException("http.badRequest.typeMismatch", segment, "resourceType");
     }
 }
