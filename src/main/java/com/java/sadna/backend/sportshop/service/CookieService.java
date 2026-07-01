@@ -17,16 +17,15 @@ public class CookieService {
     public static final String REFRESH_COOKIE_NAME = "sportshop_refresh_token";
 
     private static final String ACCESS_COOKIE_PATH = "/";
-    // Scoped narrowly so the browser only attaches the refresh token to /auth/refresh;
-    // every other endpoint sees the short-lived access cookie alone.
-    private static final String REFRESH_COOKIE_PATH = "/api/auth/refresh";
     private static final String SAME_SITE_LAX = "Lax";
 
+    private final String refreshCookiePath;
     private final Duration accessTokenTtl;
     private final Duration refreshTokenTtl;
     private final boolean cookieSecure;
 
     public CookieService(AppProperties appProperties) {
+        this.refreshCookiePath = appProperties.getApi().getPathPrefix() + "/auth/refresh";
         this.accessTokenTtl = appProperties.getAuth().getAccessTokenTtl();
         this.refreshTokenTtl = appProperties.getAuth().getRefreshTokenTtl();
         this.cookieSecure = appProperties.getAuth().isCookieSecure();
@@ -39,7 +38,7 @@ public class CookieService {
     }
 
     public ResponseCookie buildRefreshCookie(String token) {
-        return baseBuilder(REFRESH_COOKIE_NAME, token, REFRESH_COOKIE_PATH)
+        return baseBuilder(REFRESH_COOKIE_NAME, token, refreshCookiePath)
                 .maxAge(refreshTokenTtl)
                 .build();
     }
@@ -53,7 +52,7 @@ public class CookieService {
     }
 
     public ResponseCookie clearRefreshCookie() {
-        return baseBuilder(REFRESH_COOKIE_NAME, "", REFRESH_COOKIE_PATH)
+        return baseBuilder(REFRESH_COOKIE_NAME, "", refreshCookiePath)
                 .maxAge(0)
                 .build();
     }
