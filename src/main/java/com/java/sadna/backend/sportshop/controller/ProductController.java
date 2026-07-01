@@ -66,7 +66,7 @@ public class ProductController implements ProductsApi, AdminProductsApi {
     public ResponseEntity<ProductDetail> getProduct(Long id) {
         ProductDetailDto detail = productService.getById(id);
         if (detail.getProduct().isArchived() && !SecurityContextUtils.currentUserIsAdmin()) {
-            throw new NotFoundException("Product " + id + " not found.");
+            throw new NotFoundException("product.notFound", id);
         }
         return ResponseEntity.ok(productDetailDtoToProductDetailMapper.map(detail));
     }

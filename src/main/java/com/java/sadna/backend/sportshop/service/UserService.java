@@ -26,23 +26,6 @@ import java.time.OffsetDateTime;
 @Service
 public class UserService {
 
-    private static final String USER_NOT_ACTIVE_MESSAGE = "User does not exist or is not active.";
-    private static final String USER_NOT_FOUND_MESSAGE = "User not found.";
-    private static final String CURRENT_PASSWORD_INCORRECT_MESSAGE = "Current password is incorrect.";
-    private static final String CONCURRENT_MODIFICATION_MESSAGE =
-            "Your account was modified elsewhere. Please refresh and try again.";
-    private static final String PROMOTE_CONFLICT_MESSAGE = "User is already an admin or has been deleted.";
-    private static final String DEMOTE_CONFLICT_MESSAGE =
-            "User is not an admin, has been deleted, or is the last remaining admin.";
-    private static final String DELETE_ACCOUNT_CONFLICT_MESSAGE =
-            "Account cannot be deleted at the moment. Please refresh and try again.";
-    private static final String ADMIN_SOFT_DELETE_CONFLICT_MESSAGE =
-            "User has already been deleted, does not exist, or is the last remaining admin.";
-    private static final String ADMIN_LAST_ADMIN_DELETE_MESSAGE =
-            "Cannot delete the last remaining admin. Promote another user first.";
-    private static final String ADMIN_RESTORE_CONFLICT_MESSAGE =
-            "This user is no longer deleted — another admin already restored them.";
-
     private static final String SORT_FIELD_NAME = "name";
     private static final String SORT_FIELD_EMAIL = "email";
     private static final String SORT_PATH_ID = "id";
@@ -92,9 +75,9 @@ public class UserService {
 
         if (updated == 0) {
             if (actorIsAdmin) {
-                throw new NotFoundException(USER_NOT_FOUND_MESSAGE);
+                throw new NotFoundException("user.notFound");
             }
-            throw new UnauthorizedException(USER_NOT_ACTIVE_MESSAGE);
+            throw new UnauthorizedException("user.notActive");
         }
 
         UserEntity fresh = actorIsAdmin
@@ -107,7 +90,7 @@ public class UserService {
     public void changePassword(Long userId, ChangePasswordRequest dto) {
         UserEntity entity = loadActiveOrThrow(userId);
         if (!passwordEncoder.matches(dto.getCurrentPassword(), entity.getPasswordHash())) {
-            throw new UnauthorizedException(CURRENT_PASSWORD_INCORRECT_MESSAGE);
+            throw new UnauthorizedException("user.currentPasswordIncorrect");
         }
 
         int updated = userRepository.rotatePassword(
@@ -119,7 +102,7 @@ public class UserService {
         );
 
         if (updated == 0) {
-            throw new ConflictException(CONCURRENT_MODIFICATION_MESSAGE);
+            throw new ConflictException("user.concurrentModification");
         }
     }
 
@@ -127,10 +110,10 @@ public class UserService {
     public void deleteAccount(Long userId, String currentPassword, HttpServletResponse response) {
         UserEntity entity = loadActiveOrThrow(userId);
         if (!passwordEncoder.matches(currentPassword, entity.getPasswordHash())) {
-            throw new UnauthorizedException(CURRENT_PASSWORD_INCORRECT_MESSAGE);
+            throw new UnauthorizedException("user.currentPasswordIncorrect");
         }
         if (entity.isAdmin() && userRepository.countByAdminTrueAndDeletedFalse() <= 1) {
-            throw new ConflictException(DELETE_ACCOUNT_CONFLICT_MESSAGE);
+            throw new ConflictException("user.deleteConflict");
         }
 
         int deleted = userRepository.softDelete(
@@ -140,7 +123,7 @@ public class UserService {
         );
 
         if (deleted == 0) {
-            throw new ConflictException(DELETE_ACCOUNT_CONFLICT_MESSAGE);
+            throw new ConflictException("user.deleteConflict");
         }
         // Order matters: drop refresh tokens first so any in-flight refresh on this
         // user 401s immediately; the row stays soft-deleted but the session is gone.
@@ -164,7 +147,7 @@ public class UserService {
     public UserDto promoteToAdmin(Long targetUserId, Long actorUserId) {
         int updated = userRepository.applyPromote(targetUserId, actorUserId, OffsetDateTime.now());
         if (updated == 0) {
-            throw new ConflictException(PROMOTE_CONFLICT_MESSAGE);
+            throw new ConflictException("user.promoteConflict");
         }
         return userEntityToUserDtoMapper.map(loadByIdOrThrow(targetUserId));
     }
@@ -173,7 +156,7 @@ public class UserService {
     public UserDto demoteFromAdmin(Long targetUserId, Long actorUserId) {
         int updated = userRepository.applyDemote(targetUserId, actorUserId, OffsetDateTime.now());
         if (updated == 0) {
-            throw new ConflictException(DEMOTE_CONFLICT_MESSAGE);
+            throw new ConflictException("user.demoteConflict");
         }
         return userEntityToUserDtoMapper.map(loadByIdOrThrow(targetUserId));
     }
@@ -183,14 +166,14 @@ public class UserService {
         UserEntity entity = loadByIdOrThrow(targetUserId);
         if (entity.isAdmin() && !entity.isDeleted()
                 && userRepository.countByAdminTrueAndDeletedFalse() <= 1) {
-            throw new ConflictException(ADMIN_LAST_ADMIN_DELETE_MESSAGE);
+            throw new ConflictException("user.admin.lastAdminDelete");
         }
 
         int updated = userRepository.applyAdminSoftDelete(
                 targetUserId, actorUserId, OffsetDateTime.now()
         );
         if (updated == 0) {
-            throw new ConflictException(ADMIN_SOFT_DELETE_CONFLICT_MESSAGE);
+            throw new ConflictException("user.admin.softDeleteConflict");
         }
         // refresh tokens dropped in-txn so the target's in-flight refreshes 401
         // immediately; cart cleanup is fire-and-forget at the controller (cleanupDeletedUser)
@@ -204,7 +187,7 @@ public class UserService {
                 targetUserId, actorUserId, OffsetDateTime.now()
         );
         if (updated == 0) {
-            throw new ConflictException(ADMIN_RESTORE_CONFLICT_MESSAGE);
+            throw new ConflictException("user.admin.restoreConflict");
         }
         return userEntityToUserDtoMapper.map(loadByIdOrThrow(targetUserId));
     }
@@ -233,12 +216,12 @@ public class UserService {
 
     private UserEntity loadActiveOrThrow(Long userId) {
         return userRepository.findByIdAndDeletedFalse(userId)
-                .orElseThrow(() -> new UnauthorizedException(USER_NOT_ACTIVE_MESSAGE));
+                .orElseThrow(() -> new UnauthorizedException("user.notActive"));
     }
 
     private UserEntity loadByIdOrThrow(Long userId) {
         return userRepository.findById(userId)
-                .orElseThrow(() -> new NotFoundException(USER_NOT_FOUND_MESSAGE));
+                .orElseThrow(() -> new NotFoundException("user.notFound"));
     }
 
     private void attachClearedCookies(HttpServletResponse response) {

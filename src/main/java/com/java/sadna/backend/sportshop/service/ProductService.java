@@ -48,7 +48,6 @@ public class ProductService {
     private static final int DEFAULT_PAGE_SIZE = 9;
     private static final String ONE_SIZE_TOKEN = "ONE_SIZE";
     private static final int SIZE_TOKEN_MAX_LENGTH = 20;
-    private static final String VERSION_MISMATCH_MESSAGE = "Product version mismatch — refresh and retry.";
 
     private final ProductRepository productRepository;
     private final CategoryRepository categoryRepository;
@@ -136,9 +135,9 @@ public class ProductService {
     @Transactional
     public ProductDetailDto update(Long productId, ProductUpdateRequestDto input, Long actorId) {
         ProductEntity product = productRepository.findById(productId)
-                .orElseThrow(() -> new NotFoundException("Product " + productId + " not found."));
+                .orElseThrow(() -> new NotFoundException("product.notFound", productId));
         if (product.getVersion() != input.getVersion()) {
-            throw new ConflictException(VERSION_MISMATCH_MESSAGE);
+            throw new ConflictException("product.versionMismatch");
         }
         boolean wasMultiSize = product.isMultiSize();
 
@@ -169,9 +168,9 @@ public class ProductService {
     @Transactional
     public ProductDetailDto archive(Long productId, int loadedVersion, Long actorId) {
         ProductEntity product = productRepository.findById(productId)
-                .orElseThrow(() -> new NotFoundException("Product " + productId + " not found."));
+                .orElseThrow(() -> new NotFoundException("product.notFound", productId));
         if (product.isArchived() || product.getVersion() != loadedVersion) {
-            throw new ConflictException(VERSION_MISMATCH_MESSAGE);
+            throw new ConflictException("product.versionMismatch");
         }
 
         OffsetDateTime now = OffsetDateTime.now();
@@ -188,9 +187,9 @@ public class ProductService {
     @Transactional
     public ProductDetailDto restore(Long productId, int loadedVersion, Long actorId) {
         ProductEntity product = productRepository.findById(productId)
-                .orElseThrow(() -> new NotFoundException("Product " + productId + " not found."));
+                .orElseThrow(() -> new NotFoundException("product.notFound", productId));
         if (!product.isArchived() || product.getVersion() != loadedVersion) {
-            throw new ConflictException(VERSION_MISMATCH_MESSAGE);
+            throw new ConflictException("product.versionMismatch");
         }
 
         OffsetDateTime now = OffsetDateTime.now();
@@ -208,14 +207,14 @@ public class ProductService {
         try {
             productRepository.saveAndFlush(product);
         } catch (OptimisticLockingFailureException ex) {
-            throw new ConflictException(VERSION_MISMATCH_MESSAGE);
+            throw new ConflictException("product.versionMismatch");
         }
     }
 
     @Transactional(readOnly = true)
     public ProductDetailDto getById(Long id) {
         ProductEntity productEntity = productRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Product " + id + " not found."));
+                .orElseThrow(() -> new NotFoundException("product.notFound", id));
         return buildDetailDto(productEntity);
     }
 
@@ -236,34 +235,28 @@ public class ProductService {
 
     private static void validateStockBySize(boolean isMultiSize, Map<String, ProductStockInputDto> stockBySize) {
         if (stockBySize == null || stockBySize.isEmpty()) {
-            throw new BadRequestException("stockBySize must contain at least one entry.");
+            throw new BadRequestException("product.stock.entryRequired");
         }
         stockBySize.forEach((sizeToken, stock) -> {
             if (sizeToken == null || sizeToken.isBlank() || sizeToken.length() > SIZE_TOKEN_MAX_LENGTH) {
-                throw new BadRequestException(
-                        "Each stockBySize key must be a non-blank size token of length 1.."
-                                + SIZE_TOKEN_MAX_LENGTH + ".");
+                throw new BadRequestException("product.stock.sizeTokenInvalid", SIZE_TOKEN_MAX_LENGTH);
             }
             if (stock == null) {
-                throw new BadRequestException("stockBySize entry for size '" + sizeToken + "' is missing.");
+                throw new BadRequestException("product.stock.entryMissing", sizeToken);
             }
             if (stock.getQuantity() < 0) {
-                throw new BadRequestException("Quantity for size '" + sizeToken + "' must be >= 0.");
+                throw new BadRequestException("product.stock.qtyNonNegative", sizeToken);
             }
             if (stock.getLowStockThreshold() != null && stock.getLowStockThreshold() < 0) {
-                throw new BadRequestException(
-                        "lowStockThreshold for size '" + sizeToken + "' must be >= 0.");
+                throw new BadRequestException("product.stock.thresholdNonNegative", sizeToken);
             }
         });
         if (isMultiSize) {
             if (stockBySize.containsKey(ONE_SIZE_TOKEN)) {
-                throw new BadRequestException(
-                        "Multi-size products must not use the '" + ONE_SIZE_TOKEN + "' size token.");
+                throw new BadRequestException("product.stock.multiSizeCannotBeOne", ONE_SIZE_TOKEN);
             }
         } else if (stockBySize.size() != 1 || !stockBySize.containsKey(ONE_SIZE_TOKEN)) {
-            throw new BadRequestException(
-                    "Single-size products must have exactly one stockBySize entry keyed '"
-                            + ONE_SIZE_TOKEN + "'.");
+            throw new BadRequestException("product.stock.singleSizeMustBeOne", ONE_SIZE_TOKEN);
         }
     }
 
@@ -271,7 +264,7 @@ public class ProductService {
         try {
             return imagesProperties.parseFilename(ResourceImagePolicy.PRODUCTS, imageUrl);
         } catch (IllegalArgumentException e) {
-            throw new BadRequestException("Invalid imageUrl.");
+            throw new BadRequestException("product.invalidImageUrl");
         }
     }
 

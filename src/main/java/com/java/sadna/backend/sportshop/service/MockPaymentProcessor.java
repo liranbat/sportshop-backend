@@ -17,8 +17,6 @@ public class MockPaymentProcessor {
 
     private static final String DECLINE_SUFFIX = "0000";
     private static final String DECLINE_REASON = "CARD_DECLINE";
-    private static final String DECLINE_MESSAGE =
-            "Your payment couldn't be processed. Please try again or use a different card.";
     private static final String TRANSACTION_PREFIX = "MOCK-";
 
     // Card numbers ending in 0000 are declined; everything else returns a synthetic transaction id.
@@ -27,7 +25,7 @@ public class MockPaymentProcessor {
         log.info("Payment attempt: cardLast4={} amount={}", last4, amount);
         if (payment.getCardNumber() != null && payment.getCardNumber().endsWith(DECLINE_SUFFIX)) {
             log.warn("Payment declined: reasonCode={}", DECLINE_REASON);
-            throw new BadGatewayException(DECLINE_MESSAGE);
+            throw new BadGatewayException("payment.declined");
         }
         String transactionId = TRANSACTION_PREFIX + UUID.randomUUID();
         log.info("Payment result: status=SUCCESS transactionId={}", transactionId);

@@ -33,12 +33,6 @@ import java.util.Base64;
 @Service
 public class AuthService {
 
-    private static final String INVALID_CREDENTIALS_MESSAGE = "Invalid email or password.";
-    private static final String INVALID_REFRESH_MESSAGE = "Refresh token is invalid or expired.";
-    private static final String EMAIL_TAKEN_MESSAGE = "An account with this email already exists.";
-    private static final String REVOKE_CONFLICT_MESSAGE =
-            "This session has already been revoked by someone else.";
-
     private static final String SORT_FIELD_USER = "user";
     private static final String SORT_FIELD_EXPIRES_AT = "expiresAt";
     private static final String SORT_PATH_ID = "id";
@@ -88,7 +82,7 @@ public class AuthService {
     public UserDto register(RegisterRequest dto) {
         String email = normalizeEmail(dto.getEmail());
         if (userRepository.existsByEmail(email)) {
-            throw new ConflictException(EMAIL_TAKEN_MESSAGE);
+            throw new ConflictException("auth.emailTaken");
         }
         UserEntity entity = new UserEntity(
                 dto.getFirstName(),
@@ -105,9 +99,9 @@ public class AuthService {
     @Transactional
     public UserDto login(LoginRequest dto, HttpServletResponse response) {
         UserEntity entity = userRepository.findByEmailAndDeletedFalse(normalizeEmail(dto.getEmail()))
-                .orElseThrow(() -> new UnauthorizedException(INVALID_CREDENTIALS_MESSAGE));
+                .orElseThrow(() -> new UnauthorizedException("auth.invalidCredentials"));
         if (!passwordEncoder.matches(dto.getPassword(), entity.getPasswordHash())) {
-            throw new UnauthorizedException(INVALID_CREDENTIALS_MESSAGE);
+            throw new UnauthorizedException("auth.invalidCredentials");
         }
         issueSession(entity, response);
         return userEntityToUserDtoMapper.map(entity);
@@ -126,17 +120,17 @@ public class AuthService {
         // Missing / unknown / expired all surface the same message so an attacker
         // probing /auth/refresh cannot tell whether a cookie was even present.
         String refreshTokenValue = cookieService.readRefreshCookie(request)
-                .orElseThrow(() -> new UnauthorizedException(INVALID_REFRESH_MESSAGE));
+                .orElseThrow(() -> new UnauthorizedException("auth.invalidRefresh"));
         RefreshTokenEntity row = refreshTokenRepository.findByToken(refreshTokenValue)
-                .orElseThrow(() -> new UnauthorizedException(INVALID_REFRESH_MESSAGE));
+                .orElseThrow(() -> new UnauthorizedException("auth.invalidRefresh"));
         if (row.getExpiresAt().isBefore(OffsetDateTime.now())) {
             // Drop the dead row eagerly so /auth/refresh stops finding it on
             // subsequent retries and the user is forced through full login.
             refreshTokenRepository.delete(row);
-            throw new UnauthorizedException(INVALID_REFRESH_MESSAGE);
+            throw new UnauthorizedException("auth.invalidRefresh");
         }
         UserEntity user = userRepository.findByIdAndDeletedFalse(row.getUserId())
-                .orElseThrow(() -> new UnauthorizedException(INVALID_REFRESH_MESSAGE));
+                .orElseThrow(() -> new UnauthorizedException("auth.invalidRefresh"));
 
         String newRefreshToken = generateRefreshTokenValue();
         OffsetDateTime newExpiresAt = OffsetDateTime.now().plus(refreshTokenTtl);
@@ -152,7 +146,7 @@ public class AuthService {
     @Transactional(readOnly = true)
     public UserDto getMe(Long userId) {
         UserEntity entity = userRepository.findByIdAndDeletedFalse(userId)
-                .orElseThrow(() -> new UnauthorizedException("Session is no longer valid."));
+                .orElseThrow(() -> new UnauthorizedException("auth.session.invalidSession"));
         return userEntityToUserDtoMapper.map(entity);
     }
 
@@ -176,7 +170,7 @@ public class AuthService {
     public void revokeSession(Long sessionId, Long actorId) {
         int deleted = refreshTokenRepository.deleteByIdExcludingActor(sessionId, actorId);
         if (deleted == 0) {
-            throw new ConflictException(REVOKE_CONFLICT_MESSAGE);
+            throw new ConflictException("auth.session.revokeConflict");
         }
     }
 

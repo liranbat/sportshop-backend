@@ -45,20 +45,16 @@ public class ImageStorageService {
         byte[] bytes = readBytes(file);
         DetectedImageType detected = ImageMimeDetector.detect(bytes);
         if (detected == null) {
-            throw new BadRequestException("Uploaded file is not a recognizable image.");
+            throw new BadRequestException("image.notImage");
         }
         if (!policy.allows(detected)) {
-            throw new BadRequestException(
-                    "File type " + detected.getMime() + " is not allowed for this resource."
-            );
+            throw new BadRequestException("image.unsupportedType", detected.getMime());
         }
         if (bytes.length > policy.getMaxBytes()) {
-            throw new PayloadTooLargeException("File exceeds the allowed size for this resource.");
+            throw new PayloadTooLargeException("image.tooLarge");
         }
         if (detected == DetectedImageType.SVG && SvgSecurityScanner.isUnsafe(bytes)) {
-            throw new BadRequestException(
-                    "SVG contains script content or event-handler attributes."
-            );
+            throw new BadRequestException("image.svgUnsafe");
         }
 
         String subdir = policy.subdirIn(appProperties.getImages());
@@ -72,10 +68,10 @@ public class ImageStorageService {
 
     private static void requireFile(MultipartFile file) {
         if (file == null) {
-            throw new BadRequestException("Multipart 'file' part is required.");
+            throw new BadRequestException("image.multipartFileRequired");
         }
         if (file.isEmpty()) {
-            throw new BadRequestException("Uploaded file is empty.");
+            throw new BadRequestException("image.empty");
         }
     }
 
@@ -83,9 +79,7 @@ public class ImageStorageService {
         Set<String> allowed = policy.getAllowedExtensions();
         String ext = lowerExt(original);
         if (ext == null || !allowed.contains(ext)) {
-            throw new BadRequestException(
-                    "Filename must have one of: " + String.join(", ", allowed)
-            );
+            throw new BadRequestException("image.extensionRequired", String.join(", ", allowed));
         }
     }
 
@@ -108,7 +102,7 @@ public class ImageStorageService {
         try {
             return file.getBytes();
         } catch (IOException e) {
-            throw new InternalServerErrorException("Could not read uploaded file.");
+            throw new InternalServerErrorException("image.readFailed");
         }
     }
 
@@ -118,14 +112,14 @@ public class ImageStorageService {
             Files.createDirectories(dir);
         } catch (IOException e) {
             log.error("Failed to prepare image directory {}", dir, e);
-            throw new InternalServerErrorException("Could not store the uploaded image.");
+            throw new InternalServerErrorException("image.storeFailed");
         }
 
         for (int attempt = 1; attempt <= MAX_KEY_ATTEMPTS; attempt++) {
             String filename = newFilename(detected);
             Path target = dir.resolve(filename).normalize();
             if (!target.startsWith(dir)) {
-                throw new InternalServerErrorException("Resolved storage path escapes the image directory.");
+                throw new InternalServerErrorException("image.pathEscape");
             }
             try {
                 Files.write(target, bytes, StandardOpenOption.CREATE_NEW);
@@ -134,10 +128,10 @@ public class ImageStorageService {
                 log.warn("UUID collision on attempt {}/{} for {}; regenerating", attempt, MAX_KEY_ATTEMPTS, target);
             } catch (IOException e) {
                 log.error("Failed to write uploaded image to {}", target, e);
-                throw new InternalServerErrorException("Could not store the uploaded image.");
+                throw new InternalServerErrorException("image.storeFailed");
             }
         }
         log.error("Exhausted {} UUID attempts under {}", MAX_KEY_ATTEMPTS, dir);
-        throw new InternalServerErrorException("Could not allocate a unique storage key after several attempts.");
+        throw new InternalServerErrorException("image.keyExhausted");
     }
 }

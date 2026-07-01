@@ -112,7 +112,7 @@ public class AuthController implements AuthApi, AdminSessionsApi {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<SessionRevokeAllResponse> revokeAllAdminSessions(String scope) {
         if (!SCOPE_OTHERS.equals(scope)) {
-            throw new BadRequestException("scope must be 'others'.");
+            throw new BadRequestException("auth.session.scopeMustBeOthers");
         }
         Long actorId = SecurityContextUtils.currentUserIdOrThrow();
         int affected = authService.revokeAllSessionsExceptActor(actorId);

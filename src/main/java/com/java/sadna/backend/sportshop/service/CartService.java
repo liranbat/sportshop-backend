@@ -32,15 +32,6 @@ public class CartService {
 
     private static final Logger log = LoggerFactory.getLogger(CartService.class);
 
-    private static final String MSG_PRODUCT_NOT_AVAILABLE = "This product is no longer available.";
-    private static final String MSG_SIZE_NOT_AVAILABLE = "This size is no longer available. Please choose another.";
-    private static final String MSG_INSUFFICIENT_STOCK_ADD = "Not enough stock to add this quantity. Please try a smaller amount.";
-    private static final String MSG_CART_ADD_FAILED = "Couldn't add this item to your cart. Please try again.";
-    private static final String MSG_QTY_MIN_ADD = "Quantity must be at least 1.";
-    private static final String MSG_QTY_MIN_PATCH = "Quantity must be at least 1; use DELETE to remove the item.";
-    private static final String MSG_CART_ITEM_NOT_FOUND = "This cart line is no longer in your cart.";
-    private static final String MSG_EMPTY_CART = "Your cart is empty.";
-
     private final CartItemRepository cartItemRepository;
     private final ProductRepository productRepository;
     private final ProductStockRepository productStockRepository;
@@ -75,7 +66,7 @@ public class CartService {
     @Transactional
     public void addItem(Long userId, Long productId, String size, int requestedQuantity) {
         if (requestedQuantity < 1) {
-            throw new BadRequestException(MSG_QTY_MIN_ADD);
+            throw new BadRequestException("cart.qtyMinAdd");
         }
 
         // Pre-validations surface precise messages in the sequential case. Any flip between
@@ -83,11 +74,11 @@ public class CartService {
 
         productRepository.findById(productId)
                 .filter(p -> !p.isArchived())
-                .orElseThrow(() -> new NotFoundException(MSG_PRODUCT_NOT_AVAILABLE));
+                .orElseThrow(() -> new NotFoundException("cart.productUnavailable"));
 
         ProductStockEntity stock = productStockRepository
                 .findById(new ProductStockId(productId, size))
-                .orElseThrow(() -> new NotFoundException(MSG_SIZE_NOT_AVAILABLE));
+                .orElseThrow(() -> new NotFoundException("cart.sizeUnavailable"));
 
         int existingQuantity = cartItemRepository
                 .findById(new CartItemId(userId, productId, size))
@@ -95,25 +86,25 @@ public class CartService {
                 .orElse(0);
 
         if (stock.getQuantity() < existingQuantity + requestedQuantity) {
-            throw new ConflictException(MSG_INSUFFICIENT_STOCK_ADD);
+            throw new ConflictException("cart.insufficientStock");
         }
 
         int affected = cartItemRepository.upsertIfStockAllows(userId, productId, size, requestedQuantity);
         if (affected == 0) {
-            throw new ConflictException(MSG_CART_ADD_FAILED);
+            throw new ConflictException("cart.addFailed");
         }
     }
 
     @Transactional
     public void updateQuantity(Long userId, Long productId, String size, int quantity) {
         if (quantity < 1) {
-            throw new BadRequestException(MSG_QTY_MIN_PATCH);
+            throw new BadRequestException("cart.qtyMinPatch");
         }
 
         // PATCH only adjusts quantity. Archive / stock issues surface at validate / checkout time.
         int updated = cartItemRepository.updateQuantityByCompositeKey(userId, productId, size, quantity);
         if (updated == 0) {
-            throw new NotFoundException(MSG_CART_ITEM_NOT_FOUND);
+            throw new NotFoundException("cart.itemNotFound");
         }
     }
 
@@ -128,7 +119,7 @@ public class CartService {
         List<CartViewRowDto> rows = dropHardDeletedProductRows(rawRows, userId);
 
         if (rows.isEmpty()) {
-            throw new ConflictException(MSG_EMPTY_CART);
+            throw new ConflictException("cart.empty");
         }
 
         List<VersionMismatchDto> versionMismatches = new ArrayList<>();

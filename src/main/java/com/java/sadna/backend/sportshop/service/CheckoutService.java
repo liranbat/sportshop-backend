@@ -36,16 +36,7 @@ public class CheckoutService {
     private static final String PAYMENT_PROVIDER_MOCK_CARD = "MOCK_CARD";
     private static final String CURRENCY_USD = "USD";
 
-    private static final String MSG_VERSION_MISMATCH =
-            "Some items in your cart have changed since you started checkout. Close this dialog and click Proceed to Checkout again to review the updates.";
-    private static final String MSG_INSUFFICIENT_STOCK_PREFLIGHT =
-            "Some items are no longer available in the quantity you requested. Close this dialog and refresh your cart to see the latest availability.";
-    private static final String MSG_INSUFFICIENT_STOCK_RACE =
-            "A conflict occurred while processing your order. Please try again, or close this dialog and click Proceed to Checkout again to see the latest cart state.";
-
     private static final int ORDER_NUMBER_RETRY_CAP = 5;
-    private static final String ORDER_NUMBER_EXHAUSTED_MESSAGE =
-            "Could not generate a unique order number. Please retry your order.";
 
     private final CartService cartService;
     private final CartItemRepository cartItemRepository;
@@ -89,9 +80,11 @@ public class CheckoutService {
                 validation.getStockIssues().size());
         if (!validation.isOk()) {
             boolean versionDrift = !validation.getVersionMismatches().isEmpty();
-            String message = versionDrift ? MSG_VERSION_MISMATCH : MSG_INSUFFICIENT_STOCK_PREFLIGHT;
+            String key = versionDrift
+                    ? "checkout.versionMismatch"
+                    : "checkout.insufficientStock.preflight";
             log.warn("Checkout pre-flight failed: versionDrift={}", versionDrift);
-            throw new ConflictException(message);
+            throw new ConflictException(key);
         }
 
         // sort first so parallel checkouts hit the same rows in the same order -- no deadlocks
@@ -114,7 +107,7 @@ public class CheckoutService {
             if (affected == 0) {
                 log.warn("Stock race: productId={} size={} requestedQty={} expectedVersion={}",
                         row.getProductId(), row.getSize(), requestedQty, expectedVersion);
-                throw new ConflictException(MSG_INSUFFICIENT_STOCK_RACE);
+                throw new ConflictException("checkout.insufficientStock.race");
             }
         }
 
@@ -148,7 +141,7 @@ public class CheckoutService {
         }
         if (orderId == null) {
             log.error("Order number exhausted: attempts={}", ORDER_NUMBER_RETRY_CAP);
-            throw new InternalServerErrorException(ORDER_NUMBER_EXHAUSTED_MESSAGE);
+            throw new InternalServerErrorException("checkout.orderNumberExhausted");
         }
         log.info("Order persisted: orderId={} orderNumber={} total={} itemCount={}",
                 orderId, orderNumber, totalPrice, itemCount);
