@@ -1,5 +1,6 @@
 package com.java.sadna.backend.sportshop.repository.specification;
 
+import com.java.sadna.backend.sportshop.common.util.SpecsUtil;
 import com.java.sadna.backend.sportshop.entity.ProductEntity;
 import org.springframework.data.jpa.domain.Specification;
 
@@ -17,21 +18,15 @@ public final class ProductSpecifications {
     }
 
     public static Specification<ProductEntity> isMultiSize(Boolean isMultiSize) {
-        if (isMultiSize == null) return null;
-        return (root, query, cb) -> cb.equal(root.get("multiSize"), isMultiSize);
+        return SpecsUtil.equal("multiSize", isMultiSize);
     }
 
     public static Specification<ProductEntity> nameContainsIgnoreCase(String search) {
-        if (search == null) return null;
-        String trimmed = search.trim();
-        if (trimmed.isEmpty()) return null;
-        String pattern = "%" + trimmed.toLowerCase() + "%";
-        return (root, query, cb) -> cb.like(cb.lower(root.get("name")), pattern);
+        return SpecsUtil.likeContainsIgnoreCase("name", search);
     }
 
     public static Specification<ProductEntity> categoryIdIn(Collection<Long> categoryIds) {
-        if (categoryIds == null || categoryIds.isEmpty()) return null;
-        return (root, query, cb) -> root.get("categoryId").in(categoryIds);
+        return SpecsUtil.in("categoryId", categoryIds);
     }
 
     public static Specification<ProductEntity> priceGte(BigDecimal priceMin) {

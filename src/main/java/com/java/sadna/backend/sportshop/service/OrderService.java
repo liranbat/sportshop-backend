@@ -19,6 +19,7 @@ import com.java.sadna.backend.sportshop.model.ShippingDetailsDto;
 import com.java.sadna.backend.sportshop.repository.OrderItemRepository;
 import com.java.sadna.backend.sportshop.repository.OrderRepository;
 import com.java.sadna.backend.sportshop.repository.PaymentRepository;
+import com.java.sadna.backend.sportshop.common.util.DatesUtil;
 import com.java.sadna.backend.sportshop.common.util.SortDirections;
 import com.java.sadna.backend.sportshop.common.util.SortResolver;
 import com.java.sadna.backend.sportshop.repository.ProductStockRepository;
@@ -33,8 +34,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -121,8 +120,8 @@ public class OrderService {
                 OrderSpecifications.customerMatches(customer),
                 OrderSpecifications.totalPriceGte(amountMin),
                 OrderSpecifications.totalPriceLte(amountMax),
-                OrderSpecifications.createdAtGte(toUtcStartOfDay(dateFrom)),
-                OrderSpecifications.createdAtLt(toUtcStartOfDayExclusive(dateTo))
+                OrderSpecifications.createdAtGte(DatesUtil.utcStartOfDay(dateFrom)),
+                OrderSpecifications.createdAtLt(DatesUtil.utcStartOfNextDay(dateTo))
         );
 
         Sort sort = SORT_RESOLVER.resolve(sortField, sortDirection);
@@ -295,16 +294,5 @@ public class OrderService {
 
         log.info("Update shipping completed: orderId={} adminId={} orderNumber={} prior={}",
                 order.getId(), adminId, orderNumber, priorStatus);
-    }
-
-    // Lower bound for dateFrom: 00:00:00Z of the same day, used with `>=`.
-    private OffsetDateTime toUtcStartOfDay(LocalDate date) {
-        return date == null ? null : date.atStartOfDay().atOffset(ZoneOffset.UTC);
-    }
-
-    // Upper bound for dateTo: 00:00:00Z of the NEXT day, used with `<`, so the entire
-    // dateTo day is included without needing 23:59:59.999... gymnastics.
-    private OffsetDateTime toUtcStartOfDayExclusive(LocalDate date) {
-        return date == null ? null : date.plusDays(1).atStartOfDay().atOffset(ZoneOffset.UTC);
     }
 }

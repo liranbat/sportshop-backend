@@ -1,5 +1,6 @@
 package com.java.sadna.backend.sportshop.repository.specification;
 
+import com.java.sadna.backend.sportshop.common.util.SpecsUtil;
 import com.java.sadna.backend.sportshop.entity.ProductEntity;
 import com.java.sadna.backend.sportshop.entity.ProductStockEntity;
 import jakarta.persistence.criteria.Join;
@@ -20,10 +21,8 @@ public final class StockSpecifications {
     }
 
     public static Specification<ProductStockEntity> productNameContainsIgnoreCase(String search) {
-        if (search == null) return null;
-        String trimmed = search.trim();
-        if (trimmed.isEmpty()) return null;
-        String pattern = "%" + trimmed.toLowerCase() + "%";
+        String pattern = SpecsUtil.toContainsPattern(search);
+        if (pattern == null) return null;
         return (root, query, cb) -> {
             Join<ProductStockEntity, ProductEntity> product = root.join("product", JoinType.INNER);
             return cb.like(cb.lower(product.get("name")), pattern);
@@ -31,8 +30,7 @@ public final class StockSpecifications {
     }
 
     public static Specification<ProductStockEntity> sizeIn(Collection<String> sizes) {
-        if (sizes == null || sizes.isEmpty()) return null;
-        return (root, query, cb) -> root.get("size").in(sizes);
+        return SpecsUtil.in("size", sizes);
     }
 
     // Threshold-aware stockStatus filter. LOW_STOCK uses the row's own low_stock_threshold;
