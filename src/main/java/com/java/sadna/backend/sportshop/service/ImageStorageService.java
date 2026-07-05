@@ -7,7 +7,7 @@ import com.java.sadna.backend.sportshop.exception.PayloadTooLargeException;
 import com.java.sadna.backend.sportshop.model.StoredImageDto;
 import com.java.sadna.backend.sportshop.model.enums.DetectedImageType;
 import com.java.sadna.backend.sportshop.model.enums.ResourceImagePolicy;
-import com.java.sadna.backend.sportshop.util.SvgSecurityScanner;
+import com.java.sadna.backend.sportshop.common.util.SvgSecurityScanner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;

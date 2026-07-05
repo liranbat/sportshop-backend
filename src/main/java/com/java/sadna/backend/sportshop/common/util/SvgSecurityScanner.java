@@ -1,4 +1,4 @@
-package com.java.sadna.backend.sportshop.util;
+package com.java.sadna.backend.sportshop.common.util;
 
 import java.nio.charset.StandardCharsets;
 import java.util.regex.Pattern;

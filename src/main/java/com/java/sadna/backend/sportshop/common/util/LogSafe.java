@@ -1,4 +1,4 @@
-package com.java.sadna.backend.sportshop.util;
+package com.java.sadna.backend.sportshop.common.util;
 
 public final class LogSafe {
 

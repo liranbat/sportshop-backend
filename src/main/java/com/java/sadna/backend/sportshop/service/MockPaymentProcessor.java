@@ -2,7 +2,7 @@ package com.java.sadna.backend.sportshop.service;
 
 import com.java.sadna.backend.sportshop.exception.BadGatewayException;
 import com.java.sadna.backend.sportshop.model.PaymentDetailsDto;
-import com.java.sadna.backend.sportshop.util.LogSafe;
+import com.java.sadna.backend.sportshop.common.util.LogSafe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
