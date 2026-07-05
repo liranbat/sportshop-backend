@@ -2,6 +2,8 @@ package com.java.sadna.backend.sportshop.service;
 
 import com.java.sadna.backend.sportshop.api.generated.authusers.model.LoginRequest;
 import com.java.sadna.backend.sportshop.api.generated.authusers.model.RegisterRequest;
+import com.java.sadna.backend.sportshop.common.util.SortDirections;
+import com.java.sadna.backend.sportshop.common.util.SortResolver;
 import com.java.sadna.backend.sportshop.config.AppProperties;
 import com.java.sadna.backend.sportshop.entity.RefreshTokenEntity;
 import com.java.sadna.backend.sportshop.entity.UserEntity;
@@ -29,17 +31,20 @@ import java.security.SecureRandom;
 import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.Base64;
+import java.util.List;
+import java.util.Map;
 
 @Service
 public class AuthService {
 
-    private static final String SORT_FIELD_USER = "user";
-    private static final String SORT_FIELD_EXPIRES_AT = "expiresAt";
-    private static final String SORT_PATH_ID = "id";
-    private static final String SORT_PATH_EXPIRES_AT = "expiresAt";
-    private static final String SORT_PATH_USER_EMAIL = "user.email";
-    private static final String SORT_DIRECTION_ASC = "asc";
-    private static final String SORT_DIRECTION_DESC = "desc";
+    private static final SortResolver SESSION_SORT_RESOLVER = new SortResolver(
+            Map.of(
+                    "user", List.of("user.email"),
+                    "expiresAt", List.of("expiresAt")
+            ),
+            SortResolver.orders("expiresAt", SortDirections.DESC, "id", SortDirections.ASC),
+            SortResolver.orders("id", SortDirections.ASC)
+    );
 
     private static final int DEFAULT_SESSION_PAGE_SIZE = 20;
 
@@ -159,7 +164,7 @@ public class AuthService {
         Specification<RefreshTokenEntity> spec = Specification.allOf(
                 SessionSpecifications.searchMatches(q)
         );
-        Sort sort = buildSessionSort(sortField, sortDirection);
+        Sort sort = SESSION_SORT_RESOLVER.resolve(sortField, sortDirection);
         return paginationService.paginate(
                 refreshTokenRepository, spec, sort, page, pageSize, DEFAULT_SESSION_PAGE_SIZE,
                 refreshTokenEntityToSessionDtoMapper
@@ -217,25 +222,5 @@ public class AuthService {
 
     private static String normalizeEmail(String raw) {
         return raw == null ? null : raw.trim().toLowerCase();
-    }
-
-    private Sort buildSessionSort(String sortField, String sortDirection) {
-        if (sortField == null || sortField.isBlank() || SORT_FIELD_EXPIRES_AT.equalsIgnoreCase(sortField)) {
-            Sort.Direction dir = sessionDirectionFor(sortDirection, Sort.Direction.DESC);
-            return Sort.by(new Sort.Order(dir, SORT_PATH_EXPIRES_AT), Sort.Order.asc(SORT_PATH_ID));
-        }
-        if (SORT_FIELD_USER.equalsIgnoreCase(sortField)) {
-            Sort.Direction dir = sessionDirectionFor(sortDirection, Sort.Direction.ASC);
-            return Sort.by(new Sort.Order(dir, SORT_PATH_USER_EMAIL), Sort.Order.asc(SORT_PATH_ID));
-        }
-        Sort.Direction dir = sessionDirectionFor(sortDirection, Sort.Direction.DESC);
-        return Sort.by(new Sort.Order(dir, SORT_PATH_EXPIRES_AT), Sort.Order.asc(SORT_PATH_ID));
-    }
-
-    private Sort.Direction sessionDirectionFor(String sortDirection, Sort.Direction fieldDefault) {
-        if (sortDirection == null || sortDirection.isBlank()) return fieldDefault;
-        if (SORT_DIRECTION_ASC.equalsIgnoreCase(sortDirection)) return Sort.Direction.ASC;
-        if (SORT_DIRECTION_DESC.equalsIgnoreCase(sortDirection)) return Sort.Direction.DESC;
-        return fieldDefault;
     }
 }

@@ -1,5 +1,7 @@
 package com.java.sadna.backend.sportshop.service;
 
+import com.java.sadna.backend.sportshop.common.util.SortDirections;
+import com.java.sadna.backend.sportshop.common.util.SortResolver;
 import com.java.sadna.backend.sportshop.config.AppProperties;
 import com.java.sadna.backend.sportshop.config.ImagesProperties;
 import com.java.sadna.backend.sportshop.entity.CategoryEntity;
@@ -36,14 +38,16 @@ import java.util.Map;
 @Service
 public class ProductService {
 
-    private static final String SORT_FIELD_ID = "id";
-    private static final String SORT_FIELD_NAME = "name";
-    private static final String SORT_FIELD_PRICE = "price";
-    private static final String SORT_FIELD_CATEGORY = "category";
-    private static final String SORT_FIELD_UPDATED_AT = "updatedAt";
-    // JPA path resolved via the read-only ManyToOne CategoryEntity association on ProductEntity.
-    private static final String SORT_PATH_CATEGORY_NAME = "category.name";
-    private static final String SORT_DIRECTION_DESC = "desc";
+    private static final SortResolver SORT_RESOLVER = new SortResolver(
+            Map.of(
+                    "price", List.of("price"),
+                    "name", List.of("name"),
+                    "category", List.of("category.name"),
+                    "updatedAt", List.of("updatedAt")
+            ),
+            SortResolver.orders("id", SortDirections.ASC),
+            SortResolver.orders("id", SortDirections.ASC)
+    );
 
     private static final int DEFAULT_PAGE_SIZE = 9;
     private static final String ONE_SIZE_TOKEN = "ONE_SIZE";
@@ -96,7 +100,7 @@ public class ProductService {
                 ProductSpecifications.priceLte(priceMax)
         );
 
-        Sort sort = buildSort(sortField, sortDirection);
+        Sort sort = SORT_RESOLVER.resolve(sortField, sortDirection);
         return paginationService.paginate(
                 productRepository, spec, sort, page, pageSize, DEFAULT_PAGE_SIZE,
                 productEntityToProductDtoMapper
@@ -266,31 +270,5 @@ public class ProductService {
         } catch (IllegalArgumentException e) {
             throw new BadRequestException("product.invalidImageUrl");
         }
-    }
-
-    private Sort buildSort(String sortField, String sortDirection) {
-        Sort.Order idTieBreak = Sort.Order.asc(SORT_FIELD_ID);
-        if (sortField == null || sortField.isBlank()) {
-            return Sort.by(idTieBreak);
-        }
-        Sort.Direction direction = SORT_DIRECTION_DESC.equalsIgnoreCase(sortDirection)
-                ? Sort.Direction.DESC
-                : Sort.Direction.ASC;
-        String primaryField = resolvePrimarySortField(sortField);
-        if (primaryField == null) {
-            return Sort.by(idTieBreak);
-        }
-        if (SORT_FIELD_ID.equalsIgnoreCase(primaryField)) {
-            return Sort.by(new Sort.Order(direction, SORT_FIELD_ID));
-        }
-        return Sort.by(new Sort.Order(direction, primaryField), idTieBreak);
-    }
-
-    private String resolvePrimarySortField(String sortField) {
-        if (SORT_FIELD_PRICE.equalsIgnoreCase(sortField)) return SORT_FIELD_PRICE;
-        if (SORT_FIELD_NAME.equalsIgnoreCase(sortField)) return SORT_FIELD_NAME;
-        if (SORT_FIELD_CATEGORY.equalsIgnoreCase(sortField)) return SORT_PATH_CATEGORY_NAME;
-        if (SORT_FIELD_UPDATED_AT.equalsIgnoreCase(sortField)) return SORT_FIELD_UPDATED_AT;
-        return null;
     }
 }

@@ -2,6 +2,8 @@ package com.java.sadna.backend.sportshop.service;
 
 import com.java.sadna.backend.sportshop.api.generated.stock.model.StockArchiveStatusFilter;
 import com.java.sadna.backend.sportshop.api.generated.stock.model.StockStatusFilter;
+import com.java.sadna.backend.sportshop.common.util.SortDirections;
+import com.java.sadna.backend.sportshop.common.util.SortResolver;
 import com.java.sadna.backend.sportshop.entity.ProductEntity;
 import com.java.sadna.backend.sportshop.entity.ProductStockEntity;
 import com.java.sadna.backend.sportshop.entity.id.ProductStockId;
@@ -21,6 +23,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class StockService {
@@ -28,17 +31,16 @@ public class StockService {
     static final String ONE_SIZE_TOKEN = "ONE_SIZE";
 
     private static final int DEFAULT_PAGE_SIZE = 50;
-    private static final String SORT_FIELD_NAME = "name";
-    private static final String SORT_FIELD_QUANTITY = "quantity";
-    private static final String SORT_FIELD_THRESHOLD = "threshold";
-    // JPA paths -- "product.name" resolves via the read-only ManyToOne ProductEntity association.
-    private static final String SORT_PATH_PRODUCT_NAME = "product.name";
-    private static final String SORT_PATH_QUANTITY = "quantity";
-    private static final String SORT_PATH_THRESHOLD = "lowStockThreshold";
-    // Sort tiebreak paths -- size first, then productId, for stable pagination.
-    private static final String SORT_TIEBREAK_PATH_SIZE = "size";
-    private static final String SORT_TIEBREAK_PATH_PRODUCT_ID = "productId";
-    private static final String SORT_DIRECTION_DESC = "desc";
+
+    private static final SortResolver SORT_RESOLVER = new SortResolver(
+            Map.of(
+                    "name", List.of("product.name"),
+                    "quantity", List.of("quantity"),
+                    "threshold", List.of("lowStockThreshold")
+            ),
+            SortResolver.orders("product.name", SortDirections.ASC, "size", SortDirections.ASC, "productId", SortDirections.ASC),
+            SortResolver.orders("size", SortDirections.ASC, "productId", SortDirections.ASC)
+    );
 
     private final ProductStockRepository productStockRepository;
     private final ProductRepository productRepository;
@@ -70,7 +72,7 @@ public class StockService {
                 StockSpecifications.stockStatus(stockStatus == null ? null : stockStatus.getValue()),
                 StockSpecifications.archiveStatus(archiveStatus == null ? null : archiveStatus.getValue())
         );
-        Sort sort = buildSort(sortField, sortDirection);
+        Sort sort = SORT_RESOLVER.resolve(sortField, sortDirection);
         return paginationService.paginate(
                 productStockRepository, spec, sort, page, pageSize, DEFAULT_PAGE_SIZE,
                 productStockEntityToStockRowDtoMapper
@@ -149,23 +151,5 @@ public class StockService {
 
     private static ConflictException sizeAlreadyExists(Long productId, String size) {
         return new ConflictException("stock.sizeAlreadyExists", productId, size);
-    }
-
-    private Sort buildSort(String sortField, String sortDirection) {
-        Sort.Direction direction = SORT_DIRECTION_DESC.equalsIgnoreCase(sortDirection)
-                ? Sort.Direction.DESC
-                : Sort.Direction.ASC;
-        Sort.Order sizeTie = Sort.Order.asc(SORT_TIEBREAK_PATH_SIZE);
-        Sort.Order productIdTie = Sort.Order.asc(SORT_TIEBREAK_PATH_PRODUCT_ID);
-        String primary = resolvePrimarySortPath(sortField);
-        return Sort.by(new Sort.Order(direction, primary), sizeTie, productIdTie);
-    }
-
-    private String resolvePrimarySortPath(String sortField) {
-        if (sortField == null || sortField.isBlank()) return SORT_PATH_PRODUCT_NAME;
-        if (SORT_FIELD_NAME.equalsIgnoreCase(sortField)) return SORT_PATH_PRODUCT_NAME;
-        if (SORT_FIELD_QUANTITY.equalsIgnoreCase(sortField)) return SORT_PATH_QUANTITY;
-        if (SORT_FIELD_THRESHOLD.equalsIgnoreCase(sortField)) return SORT_PATH_THRESHOLD;
-        return SORT_PATH_PRODUCT_NAME;
     }
 }

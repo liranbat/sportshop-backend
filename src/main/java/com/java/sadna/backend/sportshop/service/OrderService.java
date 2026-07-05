@@ -19,6 +19,8 @@ import com.java.sadna.backend.sportshop.model.ShippingDetailsDto;
 import com.java.sadna.backend.sportshop.repository.OrderItemRepository;
 import com.java.sadna.backend.sportshop.repository.OrderRepository;
 import com.java.sadna.backend.sportshop.repository.PaymentRepository;
+import com.java.sadna.backend.sportshop.common.util.SortDirections;
+import com.java.sadna.backend.sportshop.common.util.SortResolver;
 import com.java.sadna.backend.sportshop.repository.ProductStockRepository;
 import com.java.sadna.backend.sportshop.repository.specification.OrderSpecifications;
 import com.java.sadna.backend.sportshop.util.OrderStatusTransitions;
@@ -35,6 +37,7 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 @Service
@@ -42,11 +45,14 @@ public class OrderService {
 
     private static final Logger log = LoggerFactory.getLogger(OrderService.class);
 
-    private static final String SORT_FIELD_TOTAL = "total";
-    private static final String SORT_PATH_CREATED_AT = "createdAt";
-    private static final String SORT_PATH_TOTAL_PRICE = "totalPrice";
-    private static final String SORT_PATH_ID = "id";
-    private static final String SORT_DIRECTION_ASC = "asc";
+    private static final SortResolver SORT_RESOLVER = new SortResolver(
+            Map.of(
+                    "total", List.of("totalPrice"),
+                    "date",  List.of("createdAt")
+            ),
+            SortResolver.orders("createdAt", SortDirections.DESC, "id", SortDirections.ASC),
+            SortResolver.orders("id", SortDirections.ASC)
+    );
 
     private static final int DEFAULT_PAGE_SIZE = 10;
 
@@ -119,7 +125,7 @@ public class OrderService {
                 OrderSpecifications.createdAtLt(toUtcStartOfDayExclusive(dateTo))
         );
 
-        Sort sort = buildSort(sortField, sortDirection);
+        Sort sort = SORT_RESOLVER.resolve(sortField, sortDirection);
 
         return paginationService.paginate(
                 orderRepository, spec, sort, page, pageSize, DEFAULT_PAGE_SIZE,
@@ -300,18 +306,5 @@ public class OrderService {
     // dateTo day is included without needing 23:59:59.999... gymnastics.
     private OffsetDateTime toUtcStartOfDayExclusive(LocalDate date) {
         return date == null ? null : date.plusDays(1).atStartOfDay().atOffset(ZoneOffset.UTC);
-    }
-
-    private Sort buildSort(String sortField, String sortDirection) {
-        if (sortField == null || sortField.isBlank()) {
-            return Sort.by(Sort.Order.desc(SORT_PATH_CREATED_AT), Sort.Order.asc(SORT_PATH_ID));
-        }
-        Sort.Direction direction = SORT_DIRECTION_ASC.equalsIgnoreCase(sortDirection)
-                ? Sort.Direction.ASC
-                : Sort.Direction.DESC;
-        String primary = SORT_FIELD_TOTAL.equalsIgnoreCase(sortField)
-                ? SORT_PATH_TOTAL_PRICE
-                : SORT_PATH_CREATED_AT;
-        return Sort.by(new Sort.Order(direction, primary), Sort.Order.asc(SORT_PATH_ID));
     }
 }

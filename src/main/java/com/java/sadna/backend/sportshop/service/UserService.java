@@ -2,6 +2,8 @@ package com.java.sadna.backend.sportshop.service;
 
 import com.java.sadna.backend.sportshop.api.generated.authusers.model.ChangePasswordRequest;
 import com.java.sadna.backend.sportshop.api.generated.authusers.model.UpdateProfileRequest;
+import com.java.sadna.backend.sportshop.common.util.SortDirections;
+import com.java.sadna.backend.sportshop.common.util.SortResolver;
 import com.java.sadna.backend.sportshop.entity.UserEntity;
 import com.java.sadna.backend.sportshop.exception.ConflictException;
 import com.java.sadna.backend.sportshop.exception.NotFoundException;
@@ -22,20 +24,23 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
+import java.util.List;
+import java.util.Map;
 
 @Service
 public class UserService {
 
-    private static final String SORT_FIELD_NAME = "name";
-    private static final String SORT_FIELD_EMAIL = "email";
-    private static final String SORT_PATH_ID = "id";
-    private static final String SORT_PATH_FIRST_NAME = "firstName";
-    private static final String SORT_PATH_LAST_NAME = "lastName";
-    private static final String SORT_PATH_EMAIL = "email";
-    private static final String SORT_DIRECTION_ASC = "asc";
-    private static final String SORT_DIRECTION_DESC = "desc";
-
     private static final int DEFAULT_PAGE_SIZE = 20;
+
+    private static final SortResolver SORT_RESOLVER = new SortResolver(
+            Map.of(
+                    "name", List.of("firstName", "lastName"),
+                    "email", List.of("email"),
+                    "id", List.of("id")
+            ),
+            SortResolver.orders("id", SortDirections.DESC),
+            SortResolver.orders("id", SortDirections.ASC)
+    );
 
     private final UserRepository userRepository;
     private final RefreshTokenRepository refreshTokenRepository;
@@ -206,7 +211,7 @@ public class UserService {
                 UserSpecifications.searchMatches(q)
         );
 
-        Sort sort = buildSort(sortField, sortDirection);
+        Sort sort = SORT_RESOLVER.resolve(sortField, sortDirection);
 
         return paginationService.paginate(
                 userRepository, spec, sort, page, pageSize, DEFAULT_PAGE_SIZE,
@@ -227,34 +232,5 @@ public class UserService {
     private void attachClearedCookies(HttpServletResponse response) {
         response.addHeader(HttpHeaders.SET_COOKIE, cookieService.clearAccessCookie().toString());
         response.addHeader(HttpHeaders.SET_COOKIE, cookieService.clearRefreshCookie().toString());
-    }
-
-    private Sort buildSort(String sortField, String sortDirection) {
-        // Default: id desc, no extra tiebreaker (id is already unique).
-        if (sortField == null || sortField.isBlank()) {
-            return Sort.by(Sort.Order.desc(SORT_PATH_ID));
-        }
-        if (SORT_FIELD_NAME.equalsIgnoreCase(sortField)) {
-            Sort.Direction dir = directionFor(sortDirection, Sort.Direction.ASC);
-            return Sort.by(
-                    new Sort.Order(dir, SORT_PATH_FIRST_NAME),
-                    new Sort.Order(dir, SORT_PATH_LAST_NAME),
-                    Sort.Order.asc(SORT_PATH_ID)
-            );
-        }
-        if (SORT_FIELD_EMAIL.equalsIgnoreCase(sortField)) {
-            Sort.Direction dir = directionFor(sortDirection, Sort.Direction.ASC);
-            return Sort.by(new Sort.Order(dir, SORT_PATH_EMAIL), Sort.Order.asc(SORT_PATH_ID));
-        }
-        // sortField=id (or unknown) -> sort by id with default desc.
-        Sort.Direction dir = directionFor(sortDirection, Sort.Direction.DESC);
-        return Sort.by(new Sort.Order(dir, SORT_PATH_ID));
-    }
-
-    private Sort.Direction directionFor(String sortDirection, Sort.Direction fieldDefault) {
-        if (sortDirection == null || sortDirection.isBlank()) return fieldDefault;
-        if (SORT_DIRECTION_ASC.equalsIgnoreCase(sortDirection)) return Sort.Direction.ASC;
-        if (SORT_DIRECTION_DESC.equalsIgnoreCase(sortDirection)) return Sort.Direction.DESC;
-        return fieldDefault;
     }
 }
