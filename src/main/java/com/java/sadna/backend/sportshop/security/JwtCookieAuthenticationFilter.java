@@ -6,7 +6,6 @@ import com.java.sadna.backend.sportshop.service.CookieService;
 import com.java.sadna.backend.sportshop.service.JwtService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
-import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -15,7 +14,6 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
@@ -42,17 +40,21 @@ public class JwtCookieAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
     private final UserRepository userRepository;
+    private final CookieService cookieService;
 
-    public JwtCookieAuthenticationFilter(JwtService jwtService, UserRepository userRepository) {
+    public JwtCookieAuthenticationFilter(JwtService jwtService,
+                                         UserRepository userRepository,
+                                         CookieService cookieService) {
         this.jwtService = jwtService;
         this.userRepository = userRepository;
+        this.cookieService = cookieService;
     }
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
         if (SecurityContextHolder.getContext().getAuthentication() == null) {
-            readAccessCookie(request)
+            cookieService.readCookieValue(request, CookieService.ACCESS_COOKIE_NAME)
                     .flatMap(jwtService::parseAccessToken)
                     .flatMap(this::loadActiveUser)
                     .ifPresent(entity -> {
@@ -65,17 +67,6 @@ public class JwtCookieAuthenticationFilter extends OncePerRequestFilter {
 
     private Optional<UserEntity> loadActiveUser(AccessTokenClaims claims) {
         return userRepository.findByIdAndDeletedFalse(claims.getUserId());
-    }
-
-    private Optional<String> readAccessCookie(HttpServletRequest request) {
-        Cookie[] cookies = request.getCookies();
-        if (cookies == null) {
-            return Optional.empty();
-        }
-        return Arrays.stream(cookies)
-                .filter(cookie -> CookieService.ACCESS_COOKIE_NAME.equals(cookie.getName()))
-                .map(Cookie::getValue)
-                .findFirst();
     }
 
     private void populateSecurityContext(UserEntity entity) {

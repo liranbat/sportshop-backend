@@ -18,7 +18,6 @@ import com.java.sadna.backend.sportshop.repository.specification.UserSpecificati
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
-import org.springframework.http.HttpHeaders;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -133,7 +132,7 @@ public class UserService {
         // Order matters: drop refresh tokens first so any in-flight refresh on this
         // user 401s immediately; the row stays soft-deleted but the session is gone.
         refreshTokenRepository.deleteByUserId(userId);
-        attachClearedCookies(response);
+        cookieService.clearAuthCookies(response);
     }
 
     // Post-deletion cleanup. Caller fires this off the request thread; only call after
@@ -227,10 +226,5 @@ public class UserService {
     private UserEntity loadByIdOrThrow(Long userId) {
         return userRepository.findById(userId)
                 .orElseThrow(() -> new NotFoundException("user.notFound"));
-    }
-
-    private void attachClearedCookies(HttpServletResponse response) {
-        response.addHeader(HttpHeaders.SET_COOKIE, cookieService.clearAccessCookie().toString());
-        response.addHeader(HttpHeaders.SET_COOKIE, cookieService.clearRefreshCookie().toString());
     }
 }

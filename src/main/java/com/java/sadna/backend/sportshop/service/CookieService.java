@@ -3,6 +3,8 @@ package com.java.sadna.backend.sportshop.service;
 import com.java.sadna.backend.sportshop.config.AppProperties;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.stereotype.Service;
 
@@ -58,14 +60,29 @@ public class CookieService {
     }
 
     public Optional<String> readRefreshCookie(HttpServletRequest request) {
+        return readCookieValue(request, REFRESH_COOKIE_NAME);
+    }
+
+    // Generic cookie-value reader. Consumed by the JWT auth filter for the access cookie
+    // and by readRefreshCookie above; kept public so future filters/interceptors can reuse
+    // the null-safe traversal instead of re-implementing it.
+    public Optional<String> readCookieValue(HttpServletRequest request, String name) {
         Cookie[] cookies = request.getCookies();
         if (cookies == null) {
             return Optional.empty();
         }
         return Arrays.stream(cookies)
-                .filter(cookie -> REFRESH_COOKIE_NAME.equals(cookie.getName()))
+                .filter(cookie -> name.equals(cookie.getName()))
                 .map(Cookie::getValue)
                 .findFirst();
+    }
+
+    // Emits both Set-Cookie headers that wipe the access + refresh auth cookies. Both
+    // cookies must be cleared together to fully log a user out, so a single helper keeps
+    // AuthService.logout and UserService.deleteAccount from drifting apart.
+    public void clearAuthCookies(HttpServletResponse response) {
+        response.addHeader(HttpHeaders.SET_COOKIE, clearAccessCookie().toString());
+        response.addHeader(HttpHeaders.SET_COOKIE, clearRefreshCookie().toString());
     }
 
     private ResponseCookie.ResponseCookieBuilder baseBuilder(String name, String value, String path) {

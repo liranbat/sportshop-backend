@@ -117,7 +117,7 @@ public class AuthService {
         if (userIdOrNull != null) {
             refreshTokenRepository.deleteByUserId(userIdOrNull);
         }
-        attachClearedCookies(response);
+        cookieService.clearAuthCookies(response);
     }
 
     @Transactional
@@ -207,11 +207,6 @@ public class AuthService {
         ResponseCookie refresh = cookieService.buildRefreshCookie(refreshToken);
         response.addHeader(HttpHeaders.SET_COOKIE, access.toString());
         response.addHeader(HttpHeaders.SET_COOKIE, refresh.toString());
-    }
-
-    private void attachClearedCookies(HttpServletResponse response) {
-        response.addHeader(HttpHeaders.SET_COOKIE, cookieService.clearAccessCookie().toString());
-        response.addHeader(HttpHeaders.SET_COOKIE, cookieService.clearRefreshCookie().toString());
     }
 
     private String generateRefreshTokenValue() {
