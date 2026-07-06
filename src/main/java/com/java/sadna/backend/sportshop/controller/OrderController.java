@@ -7,9 +7,9 @@ import com.java.sadna.backend.sportshop.api.generated.orders.model.OrderListPage
 import com.java.sadna.backend.sportshop.api.generated.orders.model.OrderStatus;
 import com.java.sadna.backend.sportshop.api.generated.orders.model.UpdateOrderStatusRequest;
 import com.java.sadna.backend.sportshop.api.generated.orders.model.UpdateShippingAddressRequest;
-import com.java.sadna.backend.sportshop.mapper.OrderDetailDtoToOrderDetailMapper;
-import com.java.sadna.backend.sportshop.mapper.OrderShippingToShippingDetailsDtoMapper;
-import com.java.sadna.backend.sportshop.mapper.PagedOrderSummaryDtoToOrderListPageMapper;
+import com.java.sadna.backend.sportshop.mapper.dto.response.PagedOrderSummaryDtoToOrderListPageMapper;
+import com.java.sadna.backend.sportshop.mapper.request.dto.OrderShippingToShippingDetailsDtoMapper;
+import com.java.sadna.backend.sportshop.mapper.dto.response.OrderDetailDtoToOrderDetailMapper;
 import com.java.sadna.backend.sportshop.model.OrderDetailDto;
 import com.java.sadna.backend.sportshop.model.OrderSummaryDto;
 import com.java.sadna.backend.sportshop.model.PagedResult;

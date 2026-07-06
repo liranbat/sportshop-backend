@@ -5,7 +5,7 @@ import com.java.sadna.backend.sportshop.api.generated.categories.api.CategoriesA
 import com.java.sadna.backend.sportshop.api.generated.categories.model.Category;
 import com.java.sadna.backend.sportshop.api.generated.categories.model.CategorySoftDeleteRequest;
 import com.java.sadna.backend.sportshop.api.generated.categories.model.CategoryWriteRequest;
-import com.java.sadna.backend.sportshop.mapper.CategoryDtoToCategoryMapper;
+import com.java.sadna.backend.sportshop.mapper.dto.response.CategoryDtoToCategoryMapper;
 import com.java.sadna.backend.sportshop.security.SecurityContextUtils;
 import com.java.sadna.backend.sportshop.service.CategoryService;
 import org.springframework.http.ResponseEntity;

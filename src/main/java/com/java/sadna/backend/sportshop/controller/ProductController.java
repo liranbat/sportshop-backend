@@ -9,10 +9,10 @@ import com.java.sadna.backend.sportshop.api.generated.products.model.ProductLife
 import com.java.sadna.backend.sportshop.api.generated.products.model.ProductPage;
 import com.java.sadna.backend.sportshop.api.generated.products.model.ProductUpdateRequest;
 import com.java.sadna.backend.sportshop.exception.NotFoundException;
-import com.java.sadna.backend.sportshop.mapper.PagedProductDtoToProductPageMapper;
-import com.java.sadna.backend.sportshop.mapper.ProductCreateRequestToProductCreateRequestDtoMapper;
-import com.java.sadna.backend.sportshop.mapper.ProductDetailDtoToProductDetailMapper;
-import com.java.sadna.backend.sportshop.mapper.ProductUpdateRequestToProductUpdateRequestDtoMapper;
+import com.java.sadna.backend.sportshop.mapper.dto.response.PagedProductDtoToProductPageMapper;
+import com.java.sadna.backend.sportshop.mapper.request.dto.ProductCreateRequestToProductCreateRequestDtoMapper;
+import com.java.sadna.backend.sportshop.mapper.request.dto.ProductUpdateRequestToProductUpdateRequestDtoMapper;
+import com.java.sadna.backend.sportshop.mapper.dto.response.ProductDetailDtoToProductDetailMapper;
 import com.java.sadna.backend.sportshop.model.PagedResult;
 import com.java.sadna.backend.sportshop.model.ProductDetailDto;
 import com.java.sadna.backend.sportshop.model.ProductDto;

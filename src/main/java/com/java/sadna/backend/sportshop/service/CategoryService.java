@@ -5,7 +5,7 @@ import com.java.sadna.backend.sportshop.entity.CategoryEntity;
 import com.java.sadna.backend.sportshop.exception.BadRequestException;
 import com.java.sadna.backend.sportshop.exception.ConflictException;
 import com.java.sadna.backend.sportshop.exception.NotFoundException;
-import com.java.sadna.backend.sportshop.mapper.CategoryEntityToCategoryDtoMapper;
+import com.java.sadna.backend.sportshop.mapper.entity.dto.CategoryEntityToCategoryDtoMapper;
 import com.java.sadna.backend.sportshop.model.CategoryDto;
 import com.java.sadna.backend.sportshop.model.enums.ResourceImagePolicy;
 import com.java.sadna.backend.sportshop.repository.CategoryRepository;

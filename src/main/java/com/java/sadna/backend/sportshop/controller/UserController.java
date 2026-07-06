@@ -8,8 +8,8 @@ import com.java.sadna.backend.sportshop.api.generated.authusers.model.UserListPa
 import com.java.sadna.backend.sportshop.api.generated.authusers.model.UserResponse;
 import com.java.sadna.backend.sportshop.api.generated.authusers.model.UserRoleFilter;
 import com.java.sadna.backend.sportshop.api.generated.authusers.model.UserStatusFilter;
-import com.java.sadna.backend.sportshop.mapper.PagedUserDtoToUserListPageMapper;
-import com.java.sadna.backend.sportshop.mapper.UserDtoToUserResponseMapper;
+import com.java.sadna.backend.sportshop.mapper.dto.response.PagedUserDtoToUserListPageMapper;
+import com.java.sadna.backend.sportshop.mapper.dto.response.UserDtoToUserResponseMapper;
 import com.java.sadna.backend.sportshop.model.PagedResult;
 import com.java.sadna.backend.sportshop.model.UserDto;
 import com.java.sadna.backend.sportshop.security.JwtCookieAuthenticationFilter;

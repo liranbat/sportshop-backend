@@ -6,7 +6,7 @@ import com.java.sadna.backend.sportshop.entity.id.ProductStockId;
 import com.java.sadna.backend.sportshop.exception.BadRequestException;
 import com.java.sadna.backend.sportshop.exception.ConflictException;
 import com.java.sadna.backend.sportshop.exception.NotFoundException;
-import com.java.sadna.backend.sportshop.mapper.CartViewRowDtoToCartItemDtoMapper;
+import com.java.sadna.backend.sportshop.mapper.dto.dto.CartViewRowDtoToCartItemDtoMapper;
 import com.java.sadna.backend.sportshop.model.CartCountDto;
 import com.java.sadna.backend.sportshop.model.CartItemDto;
 import com.java.sadna.backend.sportshop.model.CartValidationResultDto;

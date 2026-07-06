@@ -8,8 +8,8 @@ import com.java.sadna.backend.sportshop.api.generated.authusers.model.SessionLis
 import com.java.sadna.backend.sportshop.api.generated.authusers.model.SessionRevokeAllResponse;
 import com.java.sadna.backend.sportshop.api.generated.authusers.model.UserResponse;
 import com.java.sadna.backend.sportshop.exception.BadRequestException;
-import com.java.sadna.backend.sportshop.mapper.PagedSessionDtoToSessionListPageMapper;
-import com.java.sadna.backend.sportshop.mapper.UserDtoToUserResponseMapper;
+import com.java.sadna.backend.sportshop.mapper.dto.response.PagedSessionDtoToSessionListPageMapper;
+import com.java.sadna.backend.sportshop.mapper.dto.response.UserDtoToUserResponseMapper;
 import com.java.sadna.backend.sportshop.model.PagedResult;
 import com.java.sadna.backend.sportshop.model.SessionDto;
 import com.java.sadna.backend.sportshop.security.SecurityContextUtils;
