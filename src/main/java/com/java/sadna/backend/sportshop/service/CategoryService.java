@@ -53,7 +53,7 @@ public class CategoryService {
     }
 
     @Transactional
-    public CategoryDto createCategory(String name, String iconUrl, Long actorId) {
+    public CategoryDto createCategory(String name, String iconUrl) {
         String iconFilename = parseIconFilenameOrThrow(iconUrl);
         CategoryEntity saved = categoryRepository.save(new CategoryEntity(name, iconFilename));
         return categoryEntityToCategoryDtoMapper.map(saved);

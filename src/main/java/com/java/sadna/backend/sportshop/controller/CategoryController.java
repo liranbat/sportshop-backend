@@ -46,10 +46,9 @@ public class CategoryController implements CategoriesApi, AdminCategoriesApi {
     @Override
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Category> createAdminCategory(CategoryWriteRequest req) {
-        Long actorId = SecurityContextUtils.currentUserIdOrThrow();
         return ResponseEntity.ok(
                 categoryDtoToCategoryMapper.map(
-                        categoryService.createCategory(req.getName(), req.getIcon(), actorId)
+                        categoryService.createCategory(req.getName(), req.getIcon())
                 )
         );
     }
