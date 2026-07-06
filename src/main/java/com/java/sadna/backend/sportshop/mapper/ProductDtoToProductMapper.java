@@ -1,7 +1,6 @@
 package com.java.sadna.backend.sportshop.mapper;
 
 import com.java.sadna.backend.sportshop.api.generated.products.model.Product;
-import com.java.sadna.backend.sportshop.config.AppProperties;
 import com.java.sadna.backend.sportshop.config.ImagesProperties;
 import com.java.sadna.backend.sportshop.model.ProductDto;
 import org.springframework.stereotype.Component;
@@ -11,8 +10,8 @@ public class ProductDtoToProductMapper implements BaseMapper<ProductDto, Product
 
     private final ImagesProperties imagesProperties;
 
-    public ProductDtoToProductMapper(AppProperties appProperties) {
-        this.imagesProperties = appProperties.getImages();
+    public ProductDtoToProductMapper(ImagesProperties imagesProperties) {
+        this.imagesProperties = imagesProperties;
     }
 
     @Override

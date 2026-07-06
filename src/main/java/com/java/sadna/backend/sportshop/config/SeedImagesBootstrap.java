@@ -25,8 +25,8 @@ public class SeedImagesBootstrap {
     private final ImagesProperties images;
     private final ResourcePatternResolver resolver;
 
-    public SeedImagesBootstrap(AppProperties appProperties, ResourcePatternResolver resolver) {
-        this.images = appProperties.getImages();
+    public SeedImagesBootstrap(ImagesProperties images, ResourcePatternResolver resolver) {
+        this.images = images;
         this.resolver = resolver;
     }
 

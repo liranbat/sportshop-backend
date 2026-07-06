@@ -1,6 +1,6 @@
 package com.java.sadna.backend.sportshop.service;
 
-import com.java.sadna.backend.sportshop.config.AppProperties;
+import com.java.sadna.backend.sportshop.config.ImagesProperties;
 import com.java.sadna.backend.sportshop.exception.BadRequestException;
 import com.java.sadna.backend.sportshop.exception.InternalServerErrorException;
 import com.java.sadna.backend.sportshop.exception.PayloadTooLargeException;
@@ -32,10 +32,10 @@ public class ImageStorageService {
     // Bounded retry on the (vanishingly rare) UUID collision case.
     private static final int MAX_KEY_ATTEMPTS = 5;
 
-    private final AppProperties appProperties;
+    private final ImagesProperties imagesProperties;
 
-    public ImageStorageService(AppProperties appProperties) {
-        this.appProperties = appProperties;
+    public ImageStorageService(ImagesProperties imagesProperties) {
+        this.imagesProperties = imagesProperties;
     }
 
     public StoredImageDto store(MultipartFile file, ResourceImagePolicy policy) {
@@ -57,12 +57,12 @@ public class ImageStorageService {
             throw new BadRequestException("image.svgUnsafe");
         }
 
-        String subdir = policy.subdirIn(appProperties.getImages());
+        String subdir = policy.subdirIn(imagesProperties);
         Path target = writeWithKeyRetry(bytes, subdir, detected);
         log.info("Stored uploaded image at {}", target);
 
         String filename = target.getFileName().toString();
-        String url = appProperties.getImages().composeUrl(subdir, filename);
+        String url = imagesProperties.composeUrl(subdir, filename);
         return new StoredImageDto(filename, url);
     }
 
@@ -107,7 +107,7 @@ public class ImageStorageService {
     }
 
     private Path writeWithKeyRetry(byte[] bytes, String resourceSubdir, DetectedImageType detected) {
-        Path dir = Path.of(appProperties.getImages().getLocalDir(), resourceSubdir).toAbsolutePath().normalize();
+        Path dir = Path.of(imagesProperties.getLocalDir(), resourceSubdir).toAbsolutePath().normalize();
         try {
             Files.createDirectories(dir);
         } catch (IOException e) {

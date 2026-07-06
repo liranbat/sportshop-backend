@@ -4,6 +4,7 @@ import com.java.sadna.backend.sportshop.api.generated.authusers.model.ChangePass
 import com.java.sadna.backend.sportshop.api.generated.authusers.model.UpdateProfileRequest;
 import com.java.sadna.backend.sportshop.common.util.SortDirections;
 import com.java.sadna.backend.sportshop.common.util.SortResolver;
+import com.java.sadna.backend.sportshop.config.PaginationProperties;
 import com.java.sadna.backend.sportshop.entity.UserEntity;
 import com.java.sadna.backend.sportshop.exception.ConflictException;
 import com.java.sadna.backend.sportshop.exception.NotFoundException;
@@ -29,8 +30,6 @@ import java.util.Map;
 @Service
 public class UserService {
 
-    private static final int DEFAULT_PAGE_SIZE = 20;
-
     private static final SortResolver SORT_RESOLVER = new SortResolver(
             Map.of(
                     "name", List.of("firstName", "lastName"),
@@ -48,6 +47,7 @@ public class UserService {
     private final CookieService cookieService;
     private final PaginationService paginationService;
     private final UserEntityToUserDtoMapper userEntityToUserDtoMapper;
+    private final int defaultPageSize;
 
     public UserService(UserRepository userRepository,
                        RefreshTokenRepository refreshTokenRepository,
@@ -55,7 +55,8 @@ public class UserService {
                        PasswordEncoder passwordEncoder,
                        CookieService cookieService,
                        PaginationService paginationService,
-                       UserEntityToUserDtoMapper userEntityToUserDtoMapper) {
+                       UserEntityToUserDtoMapper userEntityToUserDtoMapper,
+                       PaginationProperties paginationProperties) {
         this.userRepository = userRepository;
         this.refreshTokenRepository = refreshTokenRepository;
         this.cartItemRepository = cartItemRepository;
@@ -63,6 +64,8 @@ public class UserService {
         this.cookieService = cookieService;
         this.paginationService = paginationService;
         this.userEntityToUserDtoMapper = userEntityToUserDtoMapper;
+        this.defaultPageSize = paginationProperties.getDefaultPageSize()
+                .getOrDefault("users", 20);
     }
 
     @Transactional
@@ -213,7 +216,7 @@ public class UserService {
         Sort sort = SORT_RESOLVER.resolve(sortField, sortDirection);
 
         return paginationService.paginate(
-                userRepository, spec, sort, page, pageSize, DEFAULT_PAGE_SIZE,
+                userRepository, spec, sort, page, pageSize, defaultPageSize,
                 userEntityToUserDtoMapper
         );
     }

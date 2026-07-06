@@ -1,6 +1,5 @@
 package com.java.sadna.backend.sportshop.service;
 
-import com.java.sadna.backend.sportshop.config.AppProperties;
 import com.java.sadna.backend.sportshop.config.ImagesProperties;
 import com.java.sadna.backend.sportshop.entity.CategoryEntity;
 import com.java.sadna.backend.sportshop.exception.BadRequestException;
@@ -37,11 +36,11 @@ public class CategoryService {
     public CategoryService(CategoryRepository categoryRepository,
                            ProductRepository productRepository,
                            CategoryEntityToCategoryDtoMapper categoryEntityToCategoryDtoMapper,
-                           AppProperties appProperties) {
+                           ImagesProperties imagesProperties) {
         this.categoryRepository = categoryRepository;
         this.productRepository = productRepository;
         this.categoryEntityToCategoryDtoMapper = categoryEntityToCategoryDtoMapper;
-        this.imagesProperties = appProperties.getImages();
+        this.imagesProperties = imagesProperties;
     }
 
     @Transactional(readOnly = true)
@@ -123,10 +122,7 @@ public class CategoryService {
     }
 
     private String parseIconFilenameOrThrow(String iconUrl) {
-        try {
-            return imagesProperties.parseFilename(ResourceImagePolicy.CATEGORIES, iconUrl);
-        } catch (IllegalArgumentException e) {
-            throw new BadRequestException("category.invalidIconUrl");
-        }
+        return imagesProperties.parseFilenameOrBadRequest(
+                ResourceImagePolicy.CATEGORIES, iconUrl, "category.invalidIconUrl");
     }
 }

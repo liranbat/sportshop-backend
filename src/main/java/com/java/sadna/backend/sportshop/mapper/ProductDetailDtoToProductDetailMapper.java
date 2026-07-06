@@ -2,7 +2,6 @@ package com.java.sadna.backend.sportshop.mapper;
 
 import com.java.sadna.backend.sportshop.api.generated.products.model.ProductDetail;
 import com.java.sadna.backend.sportshop.api.generated.products.model.ProductSize;
-import com.java.sadna.backend.sportshop.config.AppProperties;
 import com.java.sadna.backend.sportshop.config.ImagesProperties;
 import com.java.sadna.backend.sportshop.model.ProductDetailDto;
 import com.java.sadna.backend.sportshop.model.ProductDto;
@@ -16,9 +15,9 @@ public class ProductDetailDtoToProductDetailMapper implements BaseMapper<Product
     private final ImagesProperties imagesProperties;
     private final ProductSizeDtoToProductSizeMapper productSizeDtoToProductSizeMapper;
 
-    public ProductDetailDtoToProductDetailMapper(AppProperties appProperties,
+    public ProductDetailDtoToProductDetailMapper(ImagesProperties imagesProperties,
                                                  ProductSizeDtoToProductSizeMapper productSizeDtoToProductSizeMapper) {
-        this.imagesProperties = appProperties.getImages();
+        this.imagesProperties = imagesProperties;
         this.productSizeDtoToProductSizeMapper = productSizeDtoToProductSizeMapper;
     }
 

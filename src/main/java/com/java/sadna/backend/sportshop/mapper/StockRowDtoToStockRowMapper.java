@@ -1,7 +1,6 @@
 package com.java.sadna.backend.sportshop.mapper;
 
 import com.java.sadna.backend.sportshop.api.generated.stock.model.StockRow;
-import com.java.sadna.backend.sportshop.config.AppProperties;
 import com.java.sadna.backend.sportshop.config.ImagesProperties;
 import com.java.sadna.backend.sportshop.model.StockRowDto;
 import org.springframework.stereotype.Component;
@@ -11,8 +10,8 @@ public class StockRowDtoToStockRowMapper implements BaseMapper<StockRowDto, Stoc
 
     private final ImagesProperties imagesProperties;
 
-    public StockRowDtoToStockRowMapper(AppProperties appProperties) {
-        this.imagesProperties = appProperties.getImages();
+    public StockRowDtoToStockRowMapper(ImagesProperties imagesProperties) {
+        this.imagesProperties = imagesProperties;
     }
 
     @Override

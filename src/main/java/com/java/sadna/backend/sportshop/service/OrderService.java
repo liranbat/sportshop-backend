@@ -20,11 +20,12 @@ import com.java.sadna.backend.sportshop.repository.OrderItemRepository;
 import com.java.sadna.backend.sportshop.repository.OrderRepository;
 import com.java.sadna.backend.sportshop.repository.PaymentRepository;
 import com.java.sadna.backend.sportshop.common.util.DatesUtil;
+import com.java.sadna.backend.sportshop.common.util.OrderStatusTransitions;
 import com.java.sadna.backend.sportshop.common.util.SortDirections;
 import com.java.sadna.backend.sportshop.common.util.SortResolver;
+import com.java.sadna.backend.sportshop.config.PaginationProperties;
 import com.java.sadna.backend.sportshop.repository.ProductStockRepository;
 import com.java.sadna.backend.sportshop.repository.specification.OrderSpecifications;
-import com.java.sadna.backend.sportshop.common.util.OrderStatusTransitions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Sort;
@@ -53,8 +54,6 @@ public class OrderService {
             SortResolver.orders("id", SortDirections.ASC)
     );
 
-    private static final int DEFAULT_PAGE_SIZE = 10;
-
     private static final Set<String> ADMIN_CANCELLABLE_STATUSES = Set.of(
             OrderStatusTransitions.PAID,
             OrderStatusTransitions.SHIPPED,
@@ -79,6 +78,7 @@ public class OrderService {
     private final PaymentEntityToOrderPaymentDtoMapper paymentEntityToOrderPaymentDtoMapper;
     private final UserEntityToCustomerForOrderDtoMapper userEntityToCustomerForOrderDtoMapper;
     private final PaginationService paginationService;
+    private final int defaultPageSize;
 
     public OrderService(OrderRepository orderRepository,
                         OrderItemRepository orderItemRepository,
@@ -88,7 +88,8 @@ public class OrderService {
                         OrderItemEntityToOrderItemDtoMapper orderItemEntityToOrderItemDtoMapper,
                         PaymentEntityToOrderPaymentDtoMapper paymentEntityToOrderPaymentDtoMapper,
                         UserEntityToCustomerForOrderDtoMapper userEntityToCustomerForOrderDtoMapper,
-                        PaginationService paginationService) {
+                        PaginationService paginationService,
+                        PaginationProperties paginationProperties) {
         this.orderRepository = orderRepository;
         this.orderItemRepository = orderItemRepository;
         this.paymentRepository = paymentRepository;
@@ -98,6 +99,8 @@ public class OrderService {
         this.paymentEntityToOrderPaymentDtoMapper = paymentEntityToOrderPaymentDtoMapper;
         this.userEntityToCustomerForOrderDtoMapper = userEntityToCustomerForOrderDtoMapper;
         this.paginationService = paginationService;
+        this.defaultPageSize = paginationProperties.getDefaultPageSize()
+                .getOrDefault("orders", 10);
     }
 
     @Transactional(readOnly = true)
@@ -127,7 +130,7 @@ public class OrderService {
         Sort sort = SORT_RESOLVER.resolve(sortField, sortDirection);
 
         return paginationService.paginate(
-                orderRepository, spec, sort, page, pageSize, DEFAULT_PAGE_SIZE,
+                orderRepository, spec, sort, page, pageSize, defaultPageSize,
                 orderEntityToOrderSummaryDtoMapper
         );
     }

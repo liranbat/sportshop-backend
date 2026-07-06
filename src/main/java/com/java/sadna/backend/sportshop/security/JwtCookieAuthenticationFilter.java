@@ -54,7 +54,7 @@ public class JwtCookieAuthenticationFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
         if (SecurityContextHolder.getContext().getAuthentication() == null) {
-            cookieService.readCookieValue(request, CookieService.ACCESS_COOKIE_NAME)
+            cookieService.readCookieValue(request, cookieService.accessCookieName())
                     .flatMap(jwtService::parseAccessToken)
                     .flatMap(this::loadActiveUser)
                     .ifPresent(entity -> {

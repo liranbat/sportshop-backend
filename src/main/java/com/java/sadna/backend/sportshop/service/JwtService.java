@@ -1,6 +1,6 @@
 package com.java.sadna.backend.sportshop.service;
 
-import com.java.sadna.backend.sportshop.config.AppProperties;
+import com.java.sadna.backend.sportshop.config.AuthProperties;
 import com.java.sadna.backend.sportshop.security.AccessTokenClaims;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
@@ -19,26 +19,23 @@ import java.util.Optional;
 @Service
 public class JwtService {
 
-    // HS256 requires >= 256 bits of key material. We accept the secret as plain
-    // UTF-8 (no base64) and validate length at construction so a misconfigured
-    // secret crashes startup with a clear message instead of producing tokens
-    // that look valid but use a weakened key.
-    private static final int MIN_SECRET_BYTES = 32;
-
     private final SecretKey signingKey;
     private final Duration accessTokenTtl;
 
-    public JwtService(AppProperties appProperties) {
-        String secret = appProperties.getAuth().getSecret();
+    public JwtService(AuthProperties authProperties) {
+        String secret = authProperties.getSecret();
+        // HS256 needs >= 32 UTF-8 bytes of key material (256 bits); fail fast at
+        // startup instead of silently signing tokens with a weakened key.
+        int minSecretBytes = authProperties.getMinSecretBytes();
         byte[] secretBytes = secret.getBytes(StandardCharsets.UTF_8);
-        if (secretBytes.length < MIN_SECRET_BYTES) {
+        if (secretBytes.length < minSecretBytes) {
             throw new IllegalStateException(
-                    "SPORTSHOP_JWT_SECRET must be at least " + MIN_SECRET_BYTES
+                    "SPORTSHOP_JWT_SECRET must be at least " + minSecretBytes
                             + " UTF-8 bytes (got " + secretBytes.length + ")."
             );
         }
         this.signingKey = Keys.hmacShaKeyFor(secretBytes);
-        this.accessTokenTtl = appProperties.getAuth().getAccessTokenTtl();
+        this.accessTokenTtl = authProperties.getAccessTokenTtl();
     }
 
     public String issueAccessToken(long userId) {

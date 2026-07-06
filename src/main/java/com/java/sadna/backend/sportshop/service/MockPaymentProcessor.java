@@ -1,5 +1,6 @@
 package com.java.sadna.backend.sportshop.service;
 
+import com.java.sadna.backend.sportshop.config.PaymentProperties;
 import com.java.sadna.backend.sportshop.exception.BadGatewayException;
 import com.java.sadna.backend.sportshop.model.PaymentDetailsDto;
 import com.java.sadna.backend.sportshop.common.util.LogSafe;
@@ -15,15 +16,21 @@ public class MockPaymentProcessor {
 
     private static final Logger log = LoggerFactory.getLogger(MockPaymentProcessor.class);
 
-    private static final String DECLINE_SUFFIX = "0000";
     private static final String DECLINE_REASON = "CARD_DECLINE";
     private static final String TRANSACTION_PREFIX = "MOCK-";
 
-    // Card numbers ending in 0000 are declined; everything else returns a synthetic transaction id.
+    private final String declineSuffix;
+
+    public MockPaymentProcessor(PaymentProperties paymentProperties) {
+        this.declineSuffix = paymentProperties.getMock().getDeclineSuffix();
+    }
+
+    // Card numbers ending in the mock decline suffix (0000 by default) are declined;
+    // everything else returns a synthetic transaction id.
     public String process(PaymentDetailsDto payment, BigDecimal amount) {
         String last4 = LogSafe.cardLast4(payment.getCardNumber());
         log.info("Payment attempt: cardLast4={} amount={}", last4, amount);
-        if (payment.getCardNumber() != null && payment.getCardNumber().endsWith(DECLINE_SUFFIX)) {
+        if (payment.getCardNumber() != null && payment.getCardNumber().endsWith(declineSuffix)) {
             log.warn("Payment declined: reasonCode={}", DECLINE_REASON);
             throw new BadGatewayException("payment.declined");
         }

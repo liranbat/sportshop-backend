@@ -4,7 +4,8 @@ import com.java.sadna.backend.sportshop.api.generated.authusers.model.LoginReque
 import com.java.sadna.backend.sportshop.api.generated.authusers.model.RegisterRequest;
 import com.java.sadna.backend.sportshop.common.util.SortDirections;
 import com.java.sadna.backend.sportshop.common.util.SortResolver;
-import com.java.sadna.backend.sportshop.config.AppProperties;
+import com.java.sadna.backend.sportshop.config.AuthProperties;
+import com.java.sadna.backend.sportshop.config.PaginationProperties;
 import com.java.sadna.backend.sportshop.entity.RefreshTokenEntity;
 import com.java.sadna.backend.sportshop.entity.UserEntity;
 import com.java.sadna.backend.sportshop.exception.ConflictException;
@@ -46,13 +47,6 @@ public class AuthService {
             SortResolver.orders("id", SortDirections.ASC)
     );
 
-    private static final int DEFAULT_SESSION_PAGE_SIZE = 20;
-
-    // 32 bytes = 256 bits of entropy -- far beyond what's practical to guess
-    // even with the unbounded validity window between issuance and rotation.
-    private static final int REFRESH_TOKEN_BYTES = 32;
-    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
-
     private final UserRepository userRepository;
     private final RefreshTokenRepository refreshTokenRepository;
     private final PasswordEncoder passwordEncoder;
@@ -61,7 +55,10 @@ public class AuthService {
     private final PaginationService paginationService;
     private final UserEntityToUserDtoMapper userEntityToUserDtoMapper;
     private final RefreshTokenEntityToSessionDtoMapper refreshTokenEntityToSessionDtoMapper;
+    private final SecureRandom secureRandom;
     private final Duration refreshTokenTtl;
+    private final int refreshTokenBytes;
+    private final int defaultSessionPageSize;
 
     public AuthService(UserRepository userRepository,
                        RefreshTokenRepository refreshTokenRepository,
@@ -71,7 +68,9 @@ public class AuthService {
                        PaginationService paginationService,
                        UserEntityToUserDtoMapper userEntityToUserDtoMapper,
                        RefreshTokenEntityToSessionDtoMapper refreshTokenEntityToSessionDtoMapper,
-                       AppProperties appProperties) {
+                       SecureRandom secureRandom,
+                       AuthProperties authProperties,
+                       PaginationProperties paginationProperties) {
         this.userRepository = userRepository;
         this.refreshTokenRepository = refreshTokenRepository;
         this.passwordEncoder = passwordEncoder;
@@ -80,7 +79,11 @@ public class AuthService {
         this.paginationService = paginationService;
         this.userEntityToUserDtoMapper = userEntityToUserDtoMapper;
         this.refreshTokenEntityToSessionDtoMapper = refreshTokenEntityToSessionDtoMapper;
-        this.refreshTokenTtl = appProperties.getAuth().getRefreshTokenTtl();
+        this.secureRandom = secureRandom;
+        this.refreshTokenTtl = authProperties.getRefreshTokenTtl();
+        this.refreshTokenBytes = authProperties.getRefreshTokenBytes();
+        this.defaultSessionPageSize = paginationProperties.getDefaultPageSize()
+                .getOrDefault("sessions", 20);
     }
 
     @Transactional
@@ -166,7 +169,7 @@ public class AuthService {
         );
         Sort sort = SESSION_SORT_RESOLVER.resolve(sortField, sortDirection);
         return paginationService.paginate(
-                refreshTokenRepository, spec, sort, page, pageSize, DEFAULT_SESSION_PAGE_SIZE,
+                refreshTokenRepository, spec, sort, page, pageSize, defaultSessionPageSize,
                 refreshTokenEntityToSessionDtoMapper
         );
     }
@@ -210,8 +213,8 @@ public class AuthService {
     }
 
     private String generateRefreshTokenValue() {
-        byte[] bytes = new byte[REFRESH_TOKEN_BYTES];
-        SECURE_RANDOM.nextBytes(bytes);
+        byte[] bytes = new byte[refreshTokenBytes];
+        secureRandom.nextBytes(bytes);
         return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
     }
 

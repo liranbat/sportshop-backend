@@ -1,7 +1,6 @@
 package com.java.sadna.backend.sportshop.mapper;
 
 import com.java.sadna.backend.sportshop.api.generated.cart.model.CartItem;
-import com.java.sadna.backend.sportshop.config.AppProperties;
 import com.java.sadna.backend.sportshop.config.ImagesProperties;
 import com.java.sadna.backend.sportshop.model.CartItemDto;
 import org.springframework.stereotype.Component;
@@ -11,8 +10,8 @@ public class CartItemDtoToCartItemMapper implements BaseMapper<CartItemDto, Cart
 
     private final ImagesProperties imagesProperties;
 
-    public CartItemDtoToCartItemMapper(AppProperties appProperties) {
-        this.imagesProperties = appProperties.getImages();
+    public CartItemDtoToCartItemMapper(ImagesProperties imagesProperties) {
+        this.imagesProperties = imagesProperties;
     }
 
     @Override

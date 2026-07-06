@@ -5,6 +5,7 @@ import com.java.sadna.backend.sportshop.api.generated.stock.model.StockStatusFil
 import com.java.sadna.backend.sportshop.common.constants.ProductConstants;
 import com.java.sadna.backend.sportshop.common.util.SortDirections;
 import com.java.sadna.backend.sportshop.common.util.SortResolver;
+import com.java.sadna.backend.sportshop.config.PaginationProperties;
 import com.java.sadna.backend.sportshop.entity.ProductEntity;
 import com.java.sadna.backend.sportshop.entity.ProductStockEntity;
 import com.java.sadna.backend.sportshop.entity.id.ProductStockId;
@@ -29,8 +30,6 @@ import java.util.Map;
 @Service
 public class StockService {
 
-    private static final int DEFAULT_PAGE_SIZE = 50;
-
     private static final SortResolver SORT_RESOLVER = new SortResolver(
             Map.of(
                     "name", List.of("product.name"),
@@ -45,15 +44,19 @@ public class StockService {
     private final ProductRepository productRepository;
     private final PaginationService paginationService;
     private final ProductStockEntityToStockRowDtoMapper productStockEntityToStockRowDtoMapper;
+    private final int defaultPageSize;
 
     public StockService(ProductStockRepository productStockRepository,
                         ProductRepository productRepository,
                         PaginationService paginationService,
-                        ProductStockEntityToStockRowDtoMapper productStockEntityToStockRowDtoMapper) {
+                        ProductStockEntityToStockRowDtoMapper productStockEntityToStockRowDtoMapper,
+                        PaginationProperties paginationProperties) {
         this.productStockRepository = productStockRepository;
         this.productRepository = productRepository;
         this.paginationService = paginationService;
         this.productStockEntityToStockRowDtoMapper = productStockEntityToStockRowDtoMapper;
+        this.defaultPageSize = paginationProperties.getDefaultPageSize()
+                .getOrDefault("stock", 50);
     }
 
     @Transactional(readOnly = true)
@@ -73,7 +76,7 @@ public class StockService {
         );
         Sort sort = SORT_RESOLVER.resolve(sortField, sortDirection);
         return paginationService.paginate(
-                productStockRepository, spec, sort, page, pageSize, DEFAULT_PAGE_SIZE,
+                productStockRepository, spec, sort, page, pageSize, defaultPageSize,
                 productStockEntityToStockRowDtoMapper
         );
     }

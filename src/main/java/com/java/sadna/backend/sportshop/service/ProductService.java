@@ -3,8 +3,8 @@ package com.java.sadna.backend.sportshop.service;
 import com.java.sadna.backend.sportshop.common.constants.ProductConstants;
 import com.java.sadna.backend.sportshop.common.util.SortDirections;
 import com.java.sadna.backend.sportshop.common.util.SortResolver;
-import com.java.sadna.backend.sportshop.config.AppProperties;
 import com.java.sadna.backend.sportshop.config.ImagesProperties;
+import com.java.sadna.backend.sportshop.config.PaginationProperties;
 import com.java.sadna.backend.sportshop.entity.CategoryEntity;
 import com.java.sadna.backend.sportshop.entity.ProductEntity;
 import com.java.sadna.backend.sportshop.entity.ProductStockEntity;
@@ -50,7 +50,6 @@ public class ProductService {
             SortResolver.orders("id", SortDirections.ASC)
     );
 
-    private static final int DEFAULT_PAGE_SIZE = 9;
     private static final int SIZE_TOKEN_MAX_LENGTH = 20;
 
     private final ProductRepository productRepository;
@@ -61,6 +60,7 @@ public class ProductService {
     private final ProductStockEntityToProductSizeDtoMapper productStockEntityToProductSizeDtoMapper;
     private final PaginationService paginationService;
     private final ImagesProperties imagesProperties;
+    private final int defaultPageSize;
 
     public ProductService(ProductRepository productRepository,
                           CategoryRepository categoryRepository,
@@ -69,7 +69,8 @@ public class ProductService {
                           ProductEntityToProductDtoMapper productEntityToProductDtoMapper,
                           ProductStockEntityToProductSizeDtoMapper productStockEntityToProductSizeDtoMapper,
                           PaginationService paginationService,
-                          AppProperties appProperties) {
+                          ImagesProperties imagesProperties,
+                          PaginationProperties paginationProperties) {
         this.productRepository = productRepository;
         this.categoryRepository = categoryRepository;
         this.productStockRepository = productStockRepository;
@@ -77,7 +78,9 @@ public class ProductService {
         this.productEntityToProductDtoMapper = productEntityToProductDtoMapper;
         this.productStockEntityToProductSizeDtoMapper = productStockEntityToProductSizeDtoMapper;
         this.paginationService = paginationService;
-        this.imagesProperties = appProperties.getImages();
+        this.imagesProperties = imagesProperties;
+        this.defaultPageSize = paginationProperties.getDefaultPageSize()
+                .getOrDefault("products", 9);
     }
 
     @Transactional(readOnly = true)
@@ -102,7 +105,7 @@ public class ProductService {
 
         Sort sort = SORT_RESOLVER.resolve(sortField, sortDirection);
         return paginationService.paginate(
-                productRepository, spec, sort, page, pageSize, DEFAULT_PAGE_SIZE,
+                productRepository, spec, sort, page, pageSize, defaultPageSize,
                 productEntityToProductDtoMapper
         );
     }
@@ -265,10 +268,7 @@ public class ProductService {
     }
 
     private String parseProductImageFilenameOrThrow(String imageUrl) {
-        try {
-            return imagesProperties.parseFilename(ResourceImagePolicy.PRODUCTS, imageUrl);
-        } catch (IllegalArgumentException e) {
-            throw new BadRequestException("product.invalidImageUrl");
-        }
+        return imagesProperties.parseFilenameOrBadRequest(
+                ResourceImagePolicy.PRODUCTS, imageUrl, "product.invalidImageUrl");
     }
 }

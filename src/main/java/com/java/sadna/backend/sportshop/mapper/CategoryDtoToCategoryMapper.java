@@ -1,7 +1,6 @@
 package com.java.sadna.backend.sportshop.mapper;
 
 import com.java.sadna.backend.sportshop.api.generated.categories.model.Category;
-import com.java.sadna.backend.sportshop.config.AppProperties;
 import com.java.sadna.backend.sportshop.config.ImagesProperties;
 import com.java.sadna.backend.sportshop.model.CategoryDto;
 import org.springframework.stereotype.Component;
@@ -11,8 +10,8 @@ public class CategoryDtoToCategoryMapper implements BaseMapper<CategoryDto, Cate
 
     private final ImagesProperties imagesProperties;
 
-    public CategoryDtoToCategoryMapper(AppProperties appProperties) {
-        this.imagesProperties = appProperties.getImages();
+    public CategoryDtoToCategoryMapper(ImagesProperties imagesProperties) {
+        this.imagesProperties = imagesProperties;
     }
 
     @Override
