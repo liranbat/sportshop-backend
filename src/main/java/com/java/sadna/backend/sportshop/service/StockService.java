@@ -2,6 +2,7 @@ package com.java.sadna.backend.sportshop.service;
 
 import com.java.sadna.backend.sportshop.api.generated.stock.model.StockArchiveStatusFilter;
 import com.java.sadna.backend.sportshop.api.generated.stock.model.StockStatusFilter;
+import com.java.sadna.backend.sportshop.common.constants.ProductConstants;
 import com.java.sadna.backend.sportshop.common.util.SortDirections;
 import com.java.sadna.backend.sportshop.common.util.SortResolver;
 import com.java.sadna.backend.sportshop.entity.ProductEntity;
@@ -27,8 +28,6 @@ import java.util.Map;
 
 @Service
 public class StockService {
-
-    static final String ONE_SIZE_TOKEN = "ONE_SIZE";
 
     private static final int DEFAULT_PAGE_SIZE = 50;
 
@@ -106,8 +105,8 @@ public class StockService {
         if (trimmed.isEmpty()) {
             throw new BadRequestException("stock.sizeBlank");
         }
-        if (ONE_SIZE_TOKEN.equals(trimmed)) {
-            throw new BadRequestException("stock.oneSizeReserved", ONE_SIZE_TOKEN);
+        if (ProductConstants.ONE_SIZE_TOKEN.equals(trimmed)) {
+            throw new BadRequestException("stock.oneSizeReserved", ProductConstants.ONE_SIZE_TOKEN);
         }
 
         // SELECT FOR UPDATE on the product so a concurrent is_multi_size flip can't interleave
@@ -127,8 +126,8 @@ public class StockService {
 
     @Transactional
     public void removeSize(Long productId, String size) {
-        if (ONE_SIZE_TOKEN.equals(size)) {
-            throw new BadRequestException("stock.oneSizeNotRemovable", ONE_SIZE_TOKEN);
+        if (ProductConstants.ONE_SIZE_TOKEN.equals(size)) {
+            throw new BadRequestException("stock.oneSizeNotRemovable", ProductConstants.ONE_SIZE_TOKEN);
         }
         ProductEntity product = productRepository.findById(productId)
                 .orElseThrow(() -> new NotFoundException("product.notFound", productId));

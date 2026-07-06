@@ -24,7 +24,7 @@ import com.java.sadna.backend.sportshop.common.util.SortDirections;
 import com.java.sadna.backend.sportshop.common.util.SortResolver;
 import com.java.sadna.backend.sportshop.repository.ProductStockRepository;
 import com.java.sadna.backend.sportshop.repository.specification.OrderSpecifications;
-import com.java.sadna.backend.sportshop.util.OrderStatusTransitions;
+import com.java.sadna.backend.sportshop.common.util.OrderStatusTransitions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Sort;
@@ -56,14 +56,14 @@ public class OrderService {
     private static final int DEFAULT_PAGE_SIZE = 10;
 
     private static final Set<String> ADMIN_CANCELLABLE_STATUSES = Set.of(
-            OrderStatusTransitions.STATUS_PAID,
-            OrderStatusTransitions.STATUS_SHIPPED,
-            OrderStatusTransitions.STATUS_DELIVERED);
+            OrderStatusTransitions.PAID,
+            OrderStatusTransitions.SHIPPED,
+            OrderStatusTransitions.DELIVERED);
 
     private static final List<String> ADMIN_EDITABLE_SHIPPING_STATUSES = List.of(
-            OrderStatusTransitions.STATUS_PAID,
-            OrderStatusTransitions.STATUS_SHIPPED,
-            OrderStatusTransitions.STATUS_DELIVERED);
+            OrderStatusTransitions.PAID,
+            OrderStatusTransitions.SHIPPED,
+            OrderStatusTransitions.DELIVERED);
 
     private static final String EDITABLE_SHIPPING_STATUSES_LIST =
             String.join(", ", ADMIN_EDITABLE_SHIPPING_STATUSES);
@@ -193,14 +193,17 @@ public class OrderService {
 
         boolean cancellable = isAdmin
                 ? ADMIN_CANCELLABLE_STATUSES.contains(order.getStatus())
-                : OrderStatusTransitions.STATUS_PAID.equals(order.getStatus());
+                : OrderStatusTransitions.PAID.equals(order.getStatus());
         if (!cancellable) {
             log.warn("Cancel rejected: orderId={} actorId={} isAdmin={} currentStatus={}",
                     order.getId(), actorId, isAdmin, order.getStatus());
             throw new ConflictException("order.cannotBeCancelled");
         }
 
-        int orderAffected = orderRepository.cancel(order.getId(), isAdmin, actorId);
+        String cancelStatus = isAdmin
+                ? OrderStatusTransitions.CANCELLED_BY_ADMIN
+                : OrderStatusTransitions.CANCELLED_BY_USER;
+        int orderAffected = orderRepository.cancel(order.getId(), isAdmin, actorId, cancelStatus);
         if (orderAffected == 0) {
             log.warn("Cancel race: orderId={} actorId={} isAdmin={} -- order moved out of the cancellable set between pre-flight and write",
                     order.getId(), actorId, isAdmin);

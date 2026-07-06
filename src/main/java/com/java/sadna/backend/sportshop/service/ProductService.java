@@ -1,5 +1,6 @@
 package com.java.sadna.backend.sportshop.service;
 
+import com.java.sadna.backend.sportshop.common.constants.ProductConstants;
 import com.java.sadna.backend.sportshop.common.util.SortDirections;
 import com.java.sadna.backend.sportshop.common.util.SortResolver;
 import com.java.sadna.backend.sportshop.config.AppProperties;
@@ -50,7 +51,6 @@ public class ProductService {
     );
 
     private static final int DEFAULT_PAGE_SIZE = 9;
-    private static final String ONE_SIZE_TOKEN = "ONE_SIZE";
     private static final int SIZE_TOKEN_MAX_LENGTH = 20;
 
     private final ProductRepository productRepository;
@@ -162,7 +162,7 @@ public class ProductService {
         if (wasMultiSize != input.isMultiSize()) {
             productStockRepository.deleteAllByProductId(productId);
             if (!input.isMultiSize()) {
-                productStockRepository.save(new ProductStockEntity(productId, ONE_SIZE_TOKEN, 0, null));
+                productStockRepository.save(new ProductStockEntity(productId, ProductConstants.ONE_SIZE_TOKEN, 0, null));
             }
         }
 
@@ -256,11 +256,11 @@ public class ProductService {
             }
         });
         if (isMultiSize) {
-            if (stockBySize.containsKey(ONE_SIZE_TOKEN)) {
-                throw new BadRequestException("product.stock.multiSizeCannotBeOne", ONE_SIZE_TOKEN);
+            if (stockBySize.containsKey(ProductConstants.ONE_SIZE_TOKEN)) {
+                throw new BadRequestException("product.stock.multiSizeCannotBeOne", ProductConstants.ONE_SIZE_TOKEN);
             }
-        } else if (stockBySize.size() != 1 || !stockBySize.containsKey(ONE_SIZE_TOKEN)) {
-            throw new BadRequestException("product.stock.singleSizeMustBeOne", ONE_SIZE_TOKEN);
+        } else if (stockBySize.size() != 1 || !stockBySize.containsKey(ProductConstants.ONE_SIZE_TOKEN)) {
+            throw new BadRequestException("product.stock.singleSizeMustBeOne", ProductConstants.ONE_SIZE_TOKEN);
         }
     }
 

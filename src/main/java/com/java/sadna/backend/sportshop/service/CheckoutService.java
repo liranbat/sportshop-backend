@@ -1,5 +1,7 @@
 package com.java.sadna.backend.sportshop.service;
 
+import com.java.sadna.backend.sportshop.common.util.OrderStatusTransitions;
+import com.java.sadna.backend.sportshop.common.util.PaymentStatuses;
 import com.java.sadna.backend.sportshop.config.AppProperties;
 import com.java.sadna.backend.sportshop.config.ImagesProperties;
 import com.java.sadna.backend.sportshop.entity.OrderItemEntity;
@@ -31,8 +33,6 @@ public class CheckoutService {
 
     private static final Logger log = LoggerFactory.getLogger(CheckoutService.class);
 
-    private static final String ORDER_STATUS_PAID = "PAID";
-    private static final String PAYMENT_STATUS_SUCCESS = "SUCCESS";
     private static final String PAYMENT_PROVIDER_MOCK_CARD = "MOCK_CARD";
     private static final String CURRENCY_USD = "USD";
 
@@ -124,7 +124,7 @@ public class CheckoutService {
             log.debug("Order number attempt: attempt={} number={}", attempt, orderNumber);
             int inserted = orderRepository.insertIfUniqueNumber(
                     userId,
-                    ORDER_STATUS_PAID,
+                    OrderStatusTransitions.PAID,
                     totalPrice,
                     orderNumber,
                     shipping.getFullName(),
@@ -170,7 +170,7 @@ public class CheckoutService {
 
         paymentRepository.save(new PaymentEntity(
                 orderId,
-                PAYMENT_STATUS_SUCCESS,
+                PaymentStatuses.SUCCESS,
                 totalPrice,
                 CURRENCY_USD,
                 PAYMENT_PROVIDER_MOCK_CARD,
