@@ -13,6 +13,7 @@ import com.java.sadna.backend.sportshop.mapper.UserDtoToUserResponseMapper;
 import com.java.sadna.backend.sportshop.model.PagedResult;
 import com.java.sadna.backend.sportshop.model.UserDto;
 import com.java.sadna.backend.sportshop.security.JwtCookieAuthenticationFilter;
+import com.java.sadna.backend.sportshop.security.Role;
 import com.java.sadna.backend.sportshop.security.SecurityContextUtils;
 import com.java.sadna.backend.sportshop.service.UserService;
 import jakarta.servlet.http.HttpServletResponse;
@@ -128,7 +129,7 @@ public class UserController implements UsersApi, AdminUsersApi {
         if (id.equals(actorId)) {
             httpServletResponse.setHeader(
                     JwtCookieAuthenticationFilter.ROLE_HEADER,
-                    JwtCookieAuthenticationFilter.ROLE_USER_VALUE
+                    Role.USER.headerValue()
             );
         }
         return ResponseEntity.ok(userDtoToUserResponseMapper.map(updated));

@@ -31,12 +31,7 @@ import java.util.Optional;
 // would also auto-register it as a generic servlet filter and we'd double-run.
 public class JwtCookieAuthenticationFilter extends OncePerRequestFilter {
 
-    public static final String AUTHORITY_ADMIN = "ROLE_ADMIN";
-    public static final String AUTHORITY_USER = "ROLE_USER";
-
     public static final String ROLE_HEADER = "X-Auth-Role";
-    public static final String ROLE_ADMIN_VALUE = "admin";
-    public static final String ROLE_USER_VALUE = "user";
 
     private final JwtService jwtService;
     private final UserRepository userRepository;
@@ -59,7 +54,7 @@ public class JwtCookieAuthenticationFilter extends OncePerRequestFilter {
                     .flatMap(this::loadActiveUser)
                     .ifPresent(entity -> {
                         populateSecurityContext(entity);
-                        response.setHeader(ROLE_HEADER, entity.isAdmin() ? ROLE_ADMIN_VALUE : ROLE_USER_VALUE);
+                        response.setHeader(ROLE_HEADER, (entity.isAdmin() ? Role.ADMIN : Role.USER).headerValue());
                     });
         }
         chain.doFilter(request, response);
@@ -71,7 +66,7 @@ public class JwtCookieAuthenticationFilter extends OncePerRequestFilter {
 
     private void populateSecurityContext(UserEntity entity) {
         SimpleGrantedAuthority authority = new SimpleGrantedAuthority(
-                entity.isAdmin() ? AUTHORITY_ADMIN : AUTHORITY_USER
+                (entity.isAdmin() ? Role.ADMIN : Role.USER).authority()
         );
         UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
                 entity.getId(), null, List.of(authority)
