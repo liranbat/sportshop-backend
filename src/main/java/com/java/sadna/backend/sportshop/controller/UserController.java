@@ -68,15 +68,7 @@ public class UserController implements UsersApi, AdminUsersApi {
     public ResponseEntity<Void> deleteAccount(String xConfirmPassword) {
         Long userId = SecurityContextUtils.currentUserIdOrThrow();
         userService.deleteAccount(userId, xConfirmPassword, httpServletResponse);
-        // Fire-and-forget cleanup; only reached if deleteAccount committed, so a thrown
-        // delete never triggers orphan cleanup. Failures are logged + swallowed.
-        CompletableFuture.runAsync(() -> {
-            try {
-                userService.cleanupDeletedUser(userId);
-            } catch (RuntimeException e) {
-                log.warn("Cleanup after user deletion failed for userId={}: {}", userId, e.toString(), e);
-            }
-        });
+        scheduleUserCleanupAfterCommit(userId, "user deletion");
         return ResponseEntity.noContent().build();
     }
 
@@ -147,15 +139,7 @@ public class UserController implements UsersApi, AdminUsersApi {
     public ResponseEntity<UserResponse> softDeleteAdminUser(Long id) {
         Long actorId = SecurityContextUtils.currentUserIdOrThrow();
         UserDto updated = userService.softDeleteAsAdmin(id, actorId);
-        // Same fire-and-forget cleanup as self-delete: only reached if the soft-delete
-        // committed, so a thrown delete never triggers orphan cleanup. Failures logged + swallowed.
-        CompletableFuture.runAsync(() -> {
-            try {
-                userService.cleanupDeletedUser(id);
-            } catch (RuntimeException e) {
-                log.warn("Cleanup after admin soft-delete failed for userId={}: {}", id, e.toString(), e);
-            }
-        });
+        scheduleUserCleanupAfterCommit(id, "admin soft-delete");
         return ResponseEntity.ok(userDtoToUserResponseMapper.map(updated));
     }
 
@@ -166,6 +150,16 @@ public class UserController implements UsersApi, AdminUsersApi {
         return ResponseEntity.ok(
                 userDtoToUserResponseMapper.map(userService.restoreAsAdmin(id, actorId))
         );
+    }
+
+    private void scheduleUserCleanupAfterCommit(Long userId, String source) {
+        CompletableFuture.runAsync(() -> {
+            try {
+                userService.cleanupDeletedUser(userId);
+            } catch (RuntimeException e) {
+                log.warn("Cleanup after {} failed for userId={}: {}", source, userId, e.toString(), e);
+            }
+        });
     }
 
     private static Boolean toIsAdmin(UserRoleFilter role) {
