@@ -9,10 +9,15 @@ import jakarta.persistence.IdClass;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 @Entity
 @Table(name = "product_stock")
 @IdClass(ProductStockId.class)
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class ProductStockEntity {
 
     @Id
@@ -34,33 +39,10 @@ public class ProductStockEntity {
     @JoinColumn(name = "product_id", insertable = false, updatable = false)
     private ProductEntity product;
 
-    protected ProductStockEntity() {
-    }
-
     public ProductStockEntity(Long productId, String size, int quantity, Integer lowStockThreshold) {
         this.productId = productId;
         this.size = size;
         this.quantity = quantity;
         this.lowStockThreshold = lowStockThreshold;
-    }
-
-    public Long getProductId() {
-        return productId;
-    }
-
-    public String getSize() {
-        return size;
-    }
-
-    public int getQuantity() {
-        return quantity;
-    }
-
-    public Integer getLowStockThreshold() {
-        return lowStockThreshold;
-    }
-
-    public ProductEntity getProduct() {
-        return product;
     }
 }

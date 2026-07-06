@@ -6,12 +6,17 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 
 @Entity
 @Table(name = "payments")
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class PaymentEntity {
 
     @Id
@@ -45,9 +50,6 @@ public class PaymentEntity {
     @Column(name = "updated_by", insertable = false, updatable = false)
     private Long updatedBy;
 
-    protected PaymentEntity() {
-    }
-
     public PaymentEntity(Long orderId,
                          String status,
                          BigDecimal amount,
@@ -60,45 +62,5 @@ public class PaymentEntity {
         this.currency = currency;
         this.provider = provider;
         this.transactionId = transactionId;
-    }
-
-    public Long getId() {
-        return id;
-    }
-
-    public Long getOrderId() {
-        return orderId;
-    }
-
-    public String getStatus() {
-        return status;
-    }
-
-    public BigDecimal getAmount() {
-        return amount;
-    }
-
-    public String getCurrency() {
-        return currency;
-    }
-
-    public String getProvider() {
-        return provider;
-    }
-
-    public String getTransactionId() {
-        return transactionId;
-    }
-
-    public OffsetDateTime getCreatedAt() {
-        return createdAt;
-    }
-
-    public OffsetDateTime getUpdatedAt() {
-        return updatedAt;
-    }
-
-    public Long getUpdatedBy() {
-        return updatedBy;
     }
 }

@@ -1,9 +1,14 @@
 package com.java.sadna.backend.sportshop.model;
 
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 
-public class OrderSummaryDto implements BaseDto {
+@Getter
+@RequiredArgsConstructor
+public class OrderSummaryDto {
 
     private final String orderNumber;
     private final String status;
@@ -11,42 +16,4 @@ public class OrderSummaryDto implements BaseDto {
     private final int itemCount;
     private final BigDecimal totalPrice;
     private final CustomerForOrderDto customer;
-
-    public OrderSummaryDto(String orderNumber,
-                           String status,
-                           OffsetDateTime createdAt,
-                           int itemCount,
-                           BigDecimal totalPrice,
-                           CustomerForOrderDto customer) {
-        this.orderNumber = orderNumber;
-        this.status = status;
-        this.createdAt = createdAt;
-        this.itemCount = itemCount;
-        this.totalPrice = totalPrice;
-        this.customer = customer;
-    }
-
-    public String getOrderNumber() {
-        return orderNumber;
-    }
-
-    public String getStatus() {
-        return status;
-    }
-
-    public OffsetDateTime getCreatedAt() {
-        return createdAt;
-    }
-
-    public int getItemCount() {
-        return itemCount;
-    }
-
-    public BigDecimal getTotalPrice() {
-        return totalPrice;
-    }
-
-    public CustomerForOrderDto getCustomer() {
-        return customer;
-    }
 }

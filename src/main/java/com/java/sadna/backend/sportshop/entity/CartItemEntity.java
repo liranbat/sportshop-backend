@@ -6,10 +6,15 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.IdClass;
 import jakarta.persistence.Table;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 @Entity
 @Table(name = "cart_items")
 @IdClass(CartItemId.class)
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class CartItemEntity {
 
     @Id
@@ -29,27 +34,4 @@ public class CartItemEntity {
 
     @Column(name = "product_version", nullable = false)
     private int productVersion;
-
-    protected CartItemEntity() {
-    }
-
-    public Long getUserId() {
-        return userId;
-    }
-
-    public Long getProductId() {
-        return productId;
-    }
-
-    public String getSize() {
-        return size;
-    }
-
-    public int getQuantity() {
-        return quantity;
-    }
-
-    public int getProductVersion() {
-        return productVersion;
-    }
 }

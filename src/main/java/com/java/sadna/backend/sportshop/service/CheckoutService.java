@@ -19,8 +19,7 @@ import com.java.sadna.backend.sportshop.repository.OrderItemRepository;
 import com.java.sadna.backend.sportshop.repository.OrderRepository;
 import com.java.sadna.backend.sportshop.repository.PaymentRepository;
 import com.java.sadna.backend.sportshop.repository.ProductStockRepository;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,9 +29,8 @@ import java.util.Comparator;
 import java.util.List;
 
 @Service
+@Slf4j
 public class CheckoutService {
-
-    private static final Logger log = LoggerFactory.getLogger(CheckoutService.class);
 
     private final CartService cartService;
     private final CartItemRepository cartItemRepository;

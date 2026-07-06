@@ -18,8 +18,7 @@ import com.java.sadna.backend.sportshop.model.VersionMismatchDto;
 import com.java.sadna.backend.sportshop.repository.CartItemRepository;
 import com.java.sadna.backend.sportshop.repository.ProductRepository;
 import com.java.sadna.backend.sportshop.repository.ProductStockRepository;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,9 +27,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Service
+@Slf4j
 public class CartService {
-
-    private static final Logger log = LoggerFactory.getLogger(CartService.class);
 
     private final CartItemRepository cartItemRepository;
     private final ProductRepository productRepository;

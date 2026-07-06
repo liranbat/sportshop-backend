@@ -4,17 +4,15 @@ import com.java.sadna.backend.sportshop.config.PaymentProperties;
 import com.java.sadna.backend.sportshop.exception.BadGatewayException;
 import com.java.sadna.backend.sportshop.model.PaymentDetailsDto;
 import com.java.sadna.backend.sportshop.common.util.LogSafe;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
 import java.util.UUID;
 
 @Component
+@Slf4j
 public class MockPaymentProcessor {
-
-    private static final Logger log = LoggerFactory.getLogger(MockPaymentProcessor.class);
 
     private static final String DECLINE_REASON = "CARD_DECLINE";
     private static final String TRANSACTION_PREFIX = "MOCK-";

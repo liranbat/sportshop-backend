@@ -8,8 +8,7 @@ import com.java.sadna.backend.sportshop.model.StoredImageDto;
 import com.java.sadna.backend.sportshop.model.enums.DetectedImageType;
 import com.java.sadna.backend.sportshop.model.enums.ResourceImagePolicy;
 import com.java.sadna.backend.sportshop.common.util.SvgSecurityScanner;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -25,9 +24,8 @@ import java.util.UUID;
 // Validates an uploaded image and writes it to {local-dir}/{subdir}/{uuid}.{ext}.
 // Magic bytes -- not the multipart Content-Type header -- decide the format.
 @Service
+@Slf4j
 public class ImageStorageService {
-
-    private static final Logger log = LoggerFactory.getLogger(ImageStorageService.class);
 
     // Bounded retry on the (vanishingly rare) UUID collision case.
     private static final int MAX_KEY_ATTEMPTS = 5;

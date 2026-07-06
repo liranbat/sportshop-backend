@@ -1,7 +1,6 @@
 package com.java.sadna.backend.sportshop.exception;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.slf4j.MDC;
 import org.springframework.context.MessageSource;
 import org.springframework.http.HttpHeaders;
@@ -30,9 +29,8 @@ import java.util.Locale;
 import java.util.stream.Collectors;
 
 @RestControllerAdvice
+@Slf4j
 public class GlobalExceptionHandler {
-
-    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     private static final String MDC_TRACE_ID = "traceId";
     private static final String TRACE_ID_UNKNOWN = "unknown";

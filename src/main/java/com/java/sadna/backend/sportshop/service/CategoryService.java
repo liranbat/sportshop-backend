@@ -10,8 +10,7 @@ import com.java.sadna.backend.sportshop.model.CategoryDto;
 import com.java.sadna.backend.sportshop.model.enums.ResourceImagePolicy;
 import com.java.sadna.backend.sportshop.repository.CategoryRepository;
 import com.java.sadna.backend.sportshop.repository.ProductRepository;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,9 +19,8 @@ import java.util.Comparator;
 import java.util.List;
 
 @Service
+@Slf4j
 public class CategoryService {
-
-    private static final Logger log = LoggerFactory.getLogger(CategoryService.class);
 
     private static final Comparator<CategoryEntity> LIST_ORDER = Comparator
             .comparing(CategoryEntity::getName, String.CASE_INSENSITIVE_ORDER)

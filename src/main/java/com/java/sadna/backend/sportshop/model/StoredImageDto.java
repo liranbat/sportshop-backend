@@ -1,20 +1,12 @@
 package com.java.sadna.backend.sportshop.model;
 
-public class StoredImageDto implements BaseDto {
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+
+@Getter
+@RequiredArgsConstructor
+public class StoredImageDto {
 
     private final String filename;
     private final String url;
-
-    public StoredImageDto(String filename, String url) {
-        this.filename = filename;
-        this.url = url;
-    }
-
-    public String getFilename() {
-        return filename;
-    }
-
-    public String getUrl() {
-        return url;
-    }
 }

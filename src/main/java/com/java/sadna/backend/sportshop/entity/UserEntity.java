@@ -6,11 +6,16 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 import java.time.OffsetDateTime;
 
 @Entity
 @Table(name = "users")
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class UserEntity {
 
     @Id
@@ -50,9 +55,6 @@ public class UserEntity {
     @Column(name = "updated_by")
     private Long updatedBy;
 
-    protected UserEntity() {
-    }
-
     public UserEntity(String firstName, String lastName, String email, String phone, String passwordHash, boolean admin) {
         this.firstName = firstName;
         this.lastName = lastName;
@@ -60,53 +62,5 @@ public class UserEntity {
         this.phone = phone;
         this.passwordHash = passwordHash;
         this.admin = admin;
-    }
-
-    public Long getId() {
-        return id;
-    }
-
-    public String getFirstName() {
-        return firstName;
-    }
-
-    public String getLastName() {
-        return lastName;
-    }
-
-    public String getEmail() {
-        return email;
-    }
-
-    public String getPhone() {
-        return phone;
-    }
-
-    public String getPasswordHash() {
-        return passwordHash;
-    }
-
-    public boolean isAdmin() {
-        return admin;
-    }
-
-    public boolean isDeleted() {
-        return deleted;
-    }
-
-    public OffsetDateTime getDeletedAt() {
-        return deletedAt;
-    }
-
-    public Long getDeletedBy() {
-        return deletedBy;
-    }
-
-    public OffsetDateTime getUpdatedAt() {
-        return updatedAt;
-    }
-
-    public Long getUpdatedBy() {
-        return updatedBy;
     }
 }

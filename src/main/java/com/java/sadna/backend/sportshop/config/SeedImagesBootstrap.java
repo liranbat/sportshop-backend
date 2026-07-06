@@ -1,8 +1,7 @@
 package com.java.sadna.backend.sportshop.config;
 
 import jakarta.annotation.PostConstruct;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.ResourcePatternResolver;
 import org.springframework.stereotype.Component;
@@ -16,9 +15,9 @@ import java.nio.file.Path;
 // @PostConstruct (not ApplicationRunner) so the copy completes BEFORE Tomcat
 // accepts traffic — otherwise /images/* would 404 briefly on first boot.
 @Component
+@Slf4j
 public class SeedImagesBootstrap {
 
-    private static final Logger log = LoggerFactory.getLogger(SeedImagesBootstrap.class);
     private static final String SEED_PATTERN = "classpath:seed-images/**/*.*";
     private static final String SEED_ROOT_MARKER = "seed-images/";
 

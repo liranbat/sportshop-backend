@@ -9,11 +9,16 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 import java.time.OffsetDateTime;
 
 @Entity
 @Table(name = "refresh_tokens")
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class RefreshTokenEntity {
 
     @Id
@@ -36,38 +41,11 @@ public class RefreshTokenEntity {
     @Column(name = "created_at", nullable = false)
     private OffsetDateTime createdAt;
 
-    protected RefreshTokenEntity() {
-    }
-
     public RefreshTokenEntity(Long userId, String token, OffsetDateTime expiresAt) {
         this.userId = userId;
         this.token = token;
         this.expiresAt = expiresAt;
         this.createdAt = OffsetDateTime.now();
-    }
-
-    public Long getId() {
-        return id;
-    }
-
-    public Long getUserId() {
-        return userId;
-    }
-
-    public UserEntity getUser() {
-        return user;
-    }
-
-    public String getToken() {
-        return token;
-    }
-
-    public OffsetDateTime getExpiresAt() {
-        return expiresAt;
-    }
-
-    public OffsetDateTime getCreatedAt() {
-        return createdAt;
     }
 
     // /auth/refresh updates token + expiresAt in place on the same row
