@@ -1,6 +1,7 @@
 package com.java.sadna.backend.sportshop.exception;
 
 import com.java.sadna.backend.sportshop.common.constants.ErrorConstants;
+import com.java.sadna.backend.sportshop.config.TraceIdResponseHeaderFilter;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.MDC;
 import org.springframework.context.MessageSource;
@@ -33,7 +34,6 @@ import java.util.stream.Collectors;
 @Slf4j
 public class GlobalExceptionHandler {
 
-    private static final String MDC_TRACE_ID = "traceId";
     private static final String TRACE_ID_UNKNOWN = "unknown";
     private static final Object[] NO_ARGS = new Object[0];
     private static final Locale MESSAGES_LOCALE = Locale.ROOT;
@@ -45,7 +45,7 @@ public class GlobalExceptionHandler {
     }
 
     private static String currentTraceId() {
-        String id = MDC.get(MDC_TRACE_ID);
+        String id = MDC.get(TraceIdResponseHeaderFilter.MDC_TRACE_ID);
         return (id != null && !id.isEmpty()) ? id : TRACE_ID_UNKNOWN;
     }
 

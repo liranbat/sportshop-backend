@@ -14,7 +14,7 @@ import java.io.IOException;
 @Component
 public class TraceIdResponseHeaderFilter extends OncePerRequestFilter {
 
-    private static final String MDC_TRACE_ID = "traceId";
+    public static final String MDC_TRACE_ID = "traceId";
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
