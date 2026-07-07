@@ -3,16 +3,11 @@ package com.java.sadna.backend.sportshop.mapper.dto.response;
 import com.java.sadna.backend.sportshop.api.generated.checkout.model.CheckoutResult;
 import com.java.sadna.backend.sportshop.mapper.BaseMapper;
 import com.java.sadna.backend.sportshop.model.CheckoutResultDto;
-import org.springframework.stereotype.Component;
+import org.mapstruct.Mapper;
 
-@Component
-public class CheckoutResultDtoToCheckoutResultMapper implements BaseMapper<CheckoutResultDto, CheckoutResult> {
+@Mapper(componentModel = "spring")
+public interface CheckoutResultDtoToCheckoutResultMapper extends BaseMapper<CheckoutResultDto, CheckoutResult> {
 
     @Override
-    public CheckoutResult map(CheckoutResultDto source) {
-        return new CheckoutResult()
-                .orderNumber(source.getOrderNumber())
-                .itemCount(source.getItemCount())
-                .totalPrice(source.getTotalPrice());
-    }
+    CheckoutResult map(CheckoutResultDto source);
 }

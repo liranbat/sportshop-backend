@@ -3,25 +3,11 @@ package com.java.sadna.backend.sportshop.mapper.dto.response;
 import com.java.sadna.backend.sportshop.api.generated.products.model.ProductSize;
 import com.java.sadna.backend.sportshop.mapper.BaseMapper;
 import com.java.sadna.backend.sportshop.model.ProductSizeDto;
-import com.java.sadna.backend.sportshop.model.enums.StockState;
-import org.springframework.stereotype.Component;
+import org.mapstruct.Mapper;
 
-@Component
-public class ProductSizeDtoToProductSizeMapper implements BaseMapper<ProductSizeDto, ProductSize> {
+@Mapper(componentModel = "spring")
+public interface ProductSizeDtoToProductSizeMapper extends BaseMapper<ProductSizeDto, ProductSize> {
 
     @Override
-    public ProductSize map(ProductSizeDto dto) {
-        return new ProductSize()
-                .size(dto.getSize())
-                .quantity(dto.getQuantity())
-                .state(mapState(dto.getState()));
-    }
-
-    private static ProductSize.StateEnum mapState(StockState state) {
-        return switch (state) {
-            case IN_STOCK -> ProductSize.StateEnum.IN_STOCK;
-            case LOW_STOCK -> ProductSize.StateEnum.LOW_STOCK;
-            case OUT_OF_STOCK -> ProductSize.StateEnum.OUT_OF_STOCK;
-        };
-    }
+    ProductSize map(ProductSizeDto source);
 }

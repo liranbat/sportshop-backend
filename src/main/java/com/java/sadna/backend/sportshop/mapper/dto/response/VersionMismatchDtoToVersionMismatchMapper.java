@@ -3,17 +3,11 @@ package com.java.sadna.backend.sportshop.mapper.dto.response;
 import com.java.sadna.backend.sportshop.api.generated.cart.model.VersionMismatch;
 import com.java.sadna.backend.sportshop.mapper.BaseMapper;
 import com.java.sadna.backend.sportshop.model.VersionMismatchDto;
-import org.springframework.stereotype.Component;
+import org.mapstruct.Mapper;
 
-@Component
-public class VersionMismatchDtoToVersionMismatchMapper implements BaseMapper<VersionMismatchDto, VersionMismatch> {
+@Mapper(componentModel = "spring")
+public interface VersionMismatchDtoToVersionMismatchMapper extends BaseMapper<VersionMismatchDto, VersionMismatch> {
 
     @Override
-    public VersionMismatch map(VersionMismatchDto source) {
-        return new VersionMismatch()
-                .productId(source.getProductId())
-                .productName(source.getProductName())
-                .size(source.getSize())
-                .productIsArchived(source.isProductIsArchived());
-    }
+    VersionMismatch map(VersionMismatchDto source);
 }

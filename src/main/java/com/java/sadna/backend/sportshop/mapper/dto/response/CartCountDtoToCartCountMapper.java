@@ -3,13 +3,11 @@ package com.java.sadna.backend.sportshop.mapper.dto.response;
 import com.java.sadna.backend.sportshop.api.generated.cart.model.CartCount;
 import com.java.sadna.backend.sportshop.mapper.BaseMapper;
 import com.java.sadna.backend.sportshop.model.CartCountDto;
-import org.springframework.stereotype.Component;
+import org.mapstruct.Mapper;
 
-@Component
-public class CartCountDtoToCartCountMapper implements BaseMapper<CartCountDto, CartCount> {
+@Mapper(componentModel = "spring")
+public interface CartCountDtoToCartCountMapper extends BaseMapper<CartCountDto, CartCount> {
 
     @Override
-    public CartCount map(CartCountDto source) {
-        return new CartCount().itemCount(source.getItemCount());
-    }
+    CartCount map(CartCountDto source);
 }
