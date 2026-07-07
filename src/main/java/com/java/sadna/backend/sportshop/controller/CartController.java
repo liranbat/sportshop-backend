@@ -9,6 +9,7 @@ import com.java.sadna.backend.sportshop.api.generated.cart.model.UpdateCartItemR
 import com.java.sadna.backend.sportshop.mapper.dto.response.CartCountDtoToCartCountMapper;
 import com.java.sadna.backend.sportshop.mapper.dto.response.CartValidationResultDtoToCartValidationResultMapper;
 import com.java.sadna.backend.sportshop.mapper.dto.response.CartViewDtoToCartViewMapper;
+import com.java.sadna.backend.sportshop.security.AuthorityRules;
 import com.java.sadna.backend.sportshop.security.SecurityContextUtils;
 import com.java.sadna.backend.sportshop.service.CartService;
 import org.springframework.http.ResponseEntity;
@@ -34,28 +35,28 @@ public class CartController implements CartApi {
     }
 
     @Override
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize(AuthorityRules.AUTHENTICATED)
     public ResponseEntity<CartCount> getCartCount() {
         Long userId = SecurityContextUtils.currentUserIdOrThrow();
         return ResponseEntity.ok(cartCountDtoToCartCountMapper.map(cartService.getCount(userId)));
     }
 
     @Override
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize(AuthorityRules.AUTHENTICATED)
     public ResponseEntity<CartView> getCart() {
         Long userId = SecurityContextUtils.currentUserIdOrThrow();
         return ResponseEntity.ok(cartViewDtoToCartViewMapper.map(cartService.read(userId)));
     }
 
     @Override
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize(AuthorityRules.AUTHENTICATED)
     public ResponseEntity<CartView> syncCart() {
         Long userId = SecurityContextUtils.currentUserIdOrThrow();
         return ResponseEntity.ok(cartViewDtoToCartViewMapper.map(cartService.sync(userId)));
     }
 
     @Override
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize(AuthorityRules.AUTHENTICATED)
     public ResponseEntity<CartValidationResult> validateCart() {
         Long userId = SecurityContextUtils.currentUserIdOrThrow();
         return ResponseEntity.ok(
@@ -64,7 +65,7 @@ public class CartController implements CartApi {
     }
 
     @Override
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize(AuthorityRules.AUTHENTICATED)
     public ResponseEntity<Void> addCartItem(AddCartItemRequest addCartItemRequest) {
         Long userId = SecurityContextUtils.currentUserIdOrThrow();
         cartService.addItem(
@@ -77,7 +78,7 @@ public class CartController implements CartApi {
     }
 
     @Override
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize(AuthorityRules.AUTHENTICATED)
     public ResponseEntity<Void> updateCartItem(Long productId, String size,
                                                UpdateCartItemRequest updateCartItemRequest) {
         Long userId = SecurityContextUtils.currentUserIdOrThrow();
@@ -86,7 +87,7 @@ public class CartController implements CartApi {
     }
 
     @Override
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize(AuthorityRules.AUTHENTICATED)
     public ResponseEntity<Void> removeCartItem(Long productId, String size) {
         Long userId = SecurityContextUtils.currentUserIdOrThrow();
         cartService.removeItem(userId, productId, size);

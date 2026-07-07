@@ -12,6 +12,7 @@ import com.java.sadna.backend.sportshop.mapper.dto.response.PagedStockRowDtoToSt
 import com.java.sadna.backend.sportshop.mapper.dto.response.StockRowDtoToStockRowMapper;
 import com.java.sadna.backend.sportshop.model.PagedResult;
 import com.java.sadna.backend.sportshop.model.StockRowDto;
+import com.java.sadna.backend.sportshop.security.AuthorityRules;
 import com.java.sadna.backend.sportshop.service.StockService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -35,7 +36,7 @@ public class StockController implements AdminStockApi {
     }
 
     @Override
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize(AuthorityRules.ADMIN)
     public ResponseEntity<StockPage> listAdminStock(String searchName,
                                                     List<String> sizes,
                                                     StockStatusFilter stockStatus,
@@ -52,7 +53,7 @@ public class StockController implements AdminStockApi {
     }
 
     @Override
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize(AuthorityRules.ADMIN)
     public ResponseEntity<StockRow> setAdminStock(Long productId,
                                                   String size,
                                                   StockSetRequest body) {
@@ -63,7 +64,7 @@ public class StockController implements AdminStockApi {
     }
 
     @Override
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize(AuthorityRules.ADMIN)
     public ResponseEntity<StockRow> adjustAdminStock(Long productId,
                                                      String size,
                                                      StockAdjustRequest body) {
@@ -72,7 +73,7 @@ public class StockController implements AdminStockApi {
     }
 
     @Override
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize(AuthorityRules.ADMIN)
     public ResponseEntity<StockRow> addAdminStockSize(Long productId, StockSizeAddRequest body) {
         StockRowDto dto = stockService.addSize(
                 productId, body.getSize(), body.getQuantity(), body.getLowStockThreshold()
@@ -81,7 +82,7 @@ public class StockController implements AdminStockApi {
     }
 
     @Override
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize(AuthorityRules.ADMIN)
     public ResponseEntity<Void> removeAdminStockSize(Long productId, String size) {
         stockService.removeSize(productId, size);
         return ResponseEntity.noContent().build();

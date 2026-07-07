@@ -5,6 +5,7 @@ import com.java.sadna.backend.sportshop.api.generated.checkout.model.CheckoutReq
 import com.java.sadna.backend.sportshop.api.generated.checkout.model.CheckoutResult;
 import com.java.sadna.backend.sportshop.mapper.request.dto.CheckoutRequestToCheckoutRequestDtoMapper;
 import com.java.sadna.backend.sportshop.mapper.dto.response.CheckoutResultDtoToCheckoutResultMapper;
+import com.java.sadna.backend.sportshop.security.AuthorityRules;
 import com.java.sadna.backend.sportshop.security.SecurityContextUtils;
 import com.java.sadna.backend.sportshop.service.CheckoutService;
 import org.springframework.http.ResponseEntity;
@@ -27,7 +28,7 @@ public class CheckoutController implements CheckoutApi {
     }
 
     @Override
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize(AuthorityRules.AUTHENTICATED)
     public ResponseEntity<CheckoutResult> checkout(CheckoutRequest checkoutRequest) {
         Long userId = SecurityContextUtils.currentUserIdOrThrow();
         return ResponseEntity.ok(checkoutResultDtoToCheckoutResultMapper.map(

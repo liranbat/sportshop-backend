@@ -4,6 +4,7 @@ import com.java.sadna.backend.sportshop.api.generated.adminimages.api.AdminImage
 import com.java.sadna.backend.sportshop.api.generated.adminimages.model.ImageUploadResponse;
 import com.java.sadna.backend.sportshop.model.StoredImageDto;
 import com.java.sadna.backend.sportshop.model.enums.ResourceImagePolicy;
+import com.java.sadna.backend.sportshop.security.AuthorityRules;
 import com.java.sadna.backend.sportshop.service.ImageStorageService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -20,7 +21,7 @@ public class AdminImagesController implements AdminImagesApi {
     }
 
     @Override
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize(AuthorityRules.ADMIN)
     public ResponseEntity<ImageUploadResponse> uploadAdminImage(String resourceType,
                                                                 MultipartFile file) {
         ResourceImagePolicy policy = ResourceImagePolicy.fromUrlSegment(resourceType);

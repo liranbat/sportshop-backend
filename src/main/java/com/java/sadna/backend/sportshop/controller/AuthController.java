@@ -12,6 +12,7 @@ import com.java.sadna.backend.sportshop.mapper.dto.response.PagedSessionDtoToSes
 import com.java.sadna.backend.sportshop.mapper.dto.response.UserDtoToUserResponseMapper;
 import com.java.sadna.backend.sportshop.model.PagedResult;
 import com.java.sadna.backend.sportshop.model.SessionDto;
+import com.java.sadna.backend.sportshop.security.AuthorityRules;
 import com.java.sadna.backend.sportshop.security.SecurityContextUtils;
 import com.java.sadna.backend.sportshop.service.AuthService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -78,7 +79,7 @@ public class AuthController implements AuthApi, AdminSessionsApi {
     }
 
     @Override
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize(AuthorityRules.AUTHENTICATED)
     public ResponseEntity<UserResponse> getMe() {
         // @PreAuthorize already guaranteed an authenticated principal; the throw inside
         // currentUserIdOrThrow only fires if something other than JwtCookieAuthenticationFilter
@@ -88,7 +89,7 @@ public class AuthController implements AuthApi, AdminSessionsApi {
     }
 
     @Override
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize(AuthorityRules.ADMIN)
     public ResponseEntity<SessionListPage> listAdminSessions(String q,
                                                              String sortField,
                                                              String sortDirection,
@@ -101,7 +102,7 @@ public class AuthController implements AuthApi, AdminSessionsApi {
     }
 
     @Override
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize(AuthorityRules.ADMIN)
     public ResponseEntity<Void> revokeAdminSession(Long sessionId) {
         Long actorId = SecurityContextUtils.currentUserIdOrThrow();
         authService.revokeSession(sessionId, actorId);
@@ -109,7 +110,7 @@ public class AuthController implements AuthApi, AdminSessionsApi {
     }
 
     @Override
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize(AuthorityRules.ADMIN)
     public ResponseEntity<SessionRevokeAllResponse> revokeAllAdminSessions(String scope) {
         if (!SCOPE_OTHERS.equals(scope)) {
             throw new BadRequestException("auth.session.scopeMustBeOthers");
