@@ -2,6 +2,7 @@ package com.java.sadna.backend.sportshop.config;
 
 import com.java.sadna.backend.sportshop.repository.UserRepository;
 import com.java.sadna.backend.sportshop.security.JwtCookieAuthenticationFilter;
+import com.java.sadna.backend.sportshop.service.CookieService;
 import com.java.sadna.backend.sportshop.service.JwtService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -15,6 +16,8 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+
+import java.security.SecureRandom;
 
 // Owns the cross-cutting bits (stateless sessions, JWT cookie filter, formLogin
 // off, CORS). Authorization is delegated to controller methods via @EnableMethodSecurity:
@@ -34,8 +37,9 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http,
                                                    JwtService jwtService,
-                                                   UserRepository userRepository) throws Exception {
-        JwtCookieAuthenticationFilter jwtCookieFilter = new JwtCookieAuthenticationFilter(jwtService, userRepository);
+                                                   UserRepository userRepository,
+                                                   CookieService cookieService) throws Exception {
+        JwtCookieAuthenticationFilter jwtCookieFilter = new JwtCookieAuthenticationFilter(jwtService, userRepository, cookieService);
 
         http
                 .csrf(AbstractHttpConfigurer::disable)
@@ -51,5 +55,10 @@ public class SecurityConfig {
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
+    }
+
+    @Bean
+    public SecureRandom secureRandom() {
+        return new SecureRandom();
     }
 }

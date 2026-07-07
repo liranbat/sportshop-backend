@@ -1,11 +1,12 @@
 package com.java.sadna.backend.sportshop.exception;
 
+import com.java.sadna.backend.sportshop.common.constants.ErrorConstants;
 import org.springframework.http.HttpStatus;
 
 public class ForbiddenException extends ApiException {
 
     private static final String CODE = "FORBIDDEN";
-    private static final String DEFAULT_KEY = "http.forbidden";
+    private static final String DEFAULT_KEY = ErrorConstants.Http.FORBIDDEN;
 
     public ForbiddenException() {
         super(HttpStatus.FORBIDDEN, CODE, DEFAULT_KEY);

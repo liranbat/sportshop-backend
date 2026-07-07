@@ -8,16 +8,17 @@ import com.java.sadna.backend.sportshop.api.generated.authusers.model.UserListPa
 import com.java.sadna.backend.sportshop.api.generated.authusers.model.UserResponse;
 import com.java.sadna.backend.sportshop.api.generated.authusers.model.UserRoleFilter;
 import com.java.sadna.backend.sportshop.api.generated.authusers.model.UserStatusFilter;
-import com.java.sadna.backend.sportshop.mapper.PagedUserDtoToUserListPageMapper;
-import com.java.sadna.backend.sportshop.mapper.UserDtoToUserResponseMapper;
+import com.java.sadna.backend.sportshop.mapper.dto.response.PagedUserDtoToUserListPageMapper;
+import com.java.sadna.backend.sportshop.mapper.dto.response.UserDtoToUserResponseMapper;
 import com.java.sadna.backend.sportshop.model.PagedResult;
+import com.java.sadna.backend.sportshop.common.constants.ApiHeaderConstants;
 import com.java.sadna.backend.sportshop.model.UserDto;
-import com.java.sadna.backend.sportshop.security.JwtCookieAuthenticationFilter;
+import com.java.sadna.backend.sportshop.common.constants.AuthorityConstants;
+import com.java.sadna.backend.sportshop.security.Role;
 import com.java.sadna.backend.sportshop.security.SecurityContextUtils;
 import com.java.sadna.backend.sportshop.service.UserService;
 import jakarta.servlet.http.HttpServletResponse;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.RestController;
@@ -25,9 +26,8 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.concurrent.CompletableFuture;
 
 @RestController
+@Slf4j
 public class UserController implements UsersApi, AdminUsersApi {
-
-    private static final Logger log = LoggerFactory.getLogger(UserController.class);
 
     private final UserService userService;
     private final UserDtoToUserResponseMapper userDtoToUserResponseMapper;
@@ -45,7 +45,7 @@ public class UserController implements UsersApi, AdminUsersApi {
     }
 
     @Override
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize(AuthorityConstants.AUTHENTICATED)
     public ResponseEntity<UserResponse> updateProfile(UpdateProfileRequest updateProfileRequest) {
         Long userId = SecurityContextUtils.currentUserIdOrThrow();
         return ResponseEntity.ok(
@@ -56,7 +56,7 @@ public class UserController implements UsersApi, AdminUsersApi {
     }
 
     @Override
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize(AuthorityConstants.AUTHENTICATED)
     public ResponseEntity<Void> changePassword(ChangePasswordRequest changePasswordRequest) {
         Long userId = SecurityContextUtils.currentUserIdOrThrow();
         userService.changePassword(userId, changePasswordRequest);
@@ -64,24 +64,16 @@ public class UserController implements UsersApi, AdminUsersApi {
     }
 
     @Override
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize(AuthorityConstants.AUTHENTICATED)
     public ResponseEntity<Void> deleteAccount(String xConfirmPassword) {
         Long userId = SecurityContextUtils.currentUserIdOrThrow();
         userService.deleteAccount(userId, xConfirmPassword, httpServletResponse);
-        // Fire-and-forget cleanup; only reached if deleteAccount committed, so a thrown
-        // delete never triggers orphan cleanup. Failures are logged + swallowed.
-        CompletableFuture.runAsync(() -> {
-            try {
-                userService.cleanupDeletedUser(userId);
-            } catch (RuntimeException e) {
-                log.warn("Cleanup after user deletion failed for userId={}: {}", userId, e.toString(), e);
-            }
-        });
+        scheduleUserCleanupAfterCommit(userId, "user deletion");
         return ResponseEntity.noContent().build();
     }
 
     @Override
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize(AuthorityConstants.ADMIN)
     public ResponseEntity<UserListPage> listAdminUsers(UserRoleFilter role,
                                                        UserStatusFilter status,
                                                        String q,
@@ -99,7 +91,7 @@ public class UserController implements UsersApi, AdminUsersApi {
     }
 
     @Override
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize(AuthorityConstants.ADMIN)
     public ResponseEntity<UserResponse> getAdminUserById(Long id) {
         return ResponseEntity.ok(
                 userDtoToUserResponseMapper.map(userService.getUserByIdAsAdmin(id))
@@ -107,7 +99,7 @@ public class UserController implements UsersApi, AdminUsersApi {
     }
 
     @Override
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize(AuthorityConstants.ADMIN)
     public ResponseEntity<UserResponse> updateAdminUser(Long id, UpdateProfileRequest updateProfileRequest) {
         Long actorId = SecurityContextUtils.currentUserIdOrThrow();
         return ResponseEntity.ok(
@@ -118,7 +110,7 @@ public class UserController implements UsersApi, AdminUsersApi {
     }
 
     @Override
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize(AuthorityConstants.ADMIN)
     public ResponseEntity<UserResponse> promoteAdminUser(Long id) {
         Long actorId = SecurityContextUtils.currentUserIdOrThrow();
         return ResponseEntity.ok(
@@ -127,7 +119,7 @@ public class UserController implements UsersApi, AdminUsersApi {
     }
 
     @Override
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize(AuthorityConstants.ADMIN)
     public ResponseEntity<UserResponse> demoteAdminUser(Long id) {
         Long actorId = SecurityContextUtils.currentUserIdOrThrow();
         UserDto updated = userService.demoteFromAdmin(id, actorId);
@@ -135,37 +127,39 @@ public class UserController implements UsersApi, AdminUsersApi {
         // frontend's auth-interceptor flips me.isAdmin on this very response
         if (id.equals(actorId)) {
             httpServletResponse.setHeader(
-                    JwtCookieAuthenticationFilter.ROLE_HEADER,
-                    JwtCookieAuthenticationFilter.ROLE_USER_VALUE
+                    ApiHeaderConstants.X_AUTH_ROLE,
+                    Role.USER.headerValue()
             );
         }
         return ResponseEntity.ok(userDtoToUserResponseMapper.map(updated));
     }
 
     @Override
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize(AuthorityConstants.ADMIN)
     public ResponseEntity<UserResponse> softDeleteAdminUser(Long id) {
         Long actorId = SecurityContextUtils.currentUserIdOrThrow();
         UserDto updated = userService.softDeleteAsAdmin(id, actorId);
-        // Same fire-and-forget cleanup as self-delete: only reached if the soft-delete
-        // committed, so a thrown delete never triggers orphan cleanup. Failures logged + swallowed.
-        CompletableFuture.runAsync(() -> {
-            try {
-                userService.cleanupDeletedUser(id);
-            } catch (RuntimeException e) {
-                log.warn("Cleanup after admin soft-delete failed for userId={}: {}", id, e.toString(), e);
-            }
-        });
+        scheduleUserCleanupAfterCommit(id, "admin soft-delete");
         return ResponseEntity.ok(userDtoToUserResponseMapper.map(updated));
     }
 
     @Override
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize(AuthorityConstants.ADMIN)
     public ResponseEntity<UserResponse> restoreAdminUser(Long id) {
         Long actorId = SecurityContextUtils.currentUserIdOrThrow();
         return ResponseEntity.ok(
                 userDtoToUserResponseMapper.map(userService.restoreAsAdmin(id, actorId))
         );
+    }
+
+    private void scheduleUserCleanupAfterCommit(Long userId, String source) {
+        CompletableFuture.runAsync(() -> {
+            try {
+                userService.cleanupDeletedUser(userId);
+            } catch (RuntimeException e) {
+                log.warn("Cleanup after {} failed for userId={}: {}", source, userId, e.toString(), e);
+            }
+        });
     }
 
     private static Boolean toIsAdmin(UserRoleFilter role) {

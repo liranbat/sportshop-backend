@@ -7,11 +7,13 @@ import com.java.sadna.backend.sportshop.api.generated.authusers.model.RegisterRe
 import com.java.sadna.backend.sportshop.api.generated.authusers.model.SessionListPage;
 import com.java.sadna.backend.sportshop.api.generated.authusers.model.SessionRevokeAllResponse;
 import com.java.sadna.backend.sportshop.api.generated.authusers.model.UserResponse;
+import com.java.sadna.backend.sportshop.common.constants.ErrorConstants;
 import com.java.sadna.backend.sportshop.exception.BadRequestException;
-import com.java.sadna.backend.sportshop.mapper.PagedSessionDtoToSessionListPageMapper;
-import com.java.sadna.backend.sportshop.mapper.UserDtoToUserResponseMapper;
+import com.java.sadna.backend.sportshop.mapper.dto.response.PagedSessionDtoToSessionListPageMapper;
+import com.java.sadna.backend.sportshop.mapper.dto.response.UserDtoToUserResponseMapper;
 import com.java.sadna.backend.sportshop.model.PagedResult;
 import com.java.sadna.backend.sportshop.model.SessionDto;
+import com.java.sadna.backend.sportshop.common.constants.AuthorityConstants;
 import com.java.sadna.backend.sportshop.security.SecurityContextUtils;
 import com.java.sadna.backend.sportshop.service.AuthService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -78,7 +80,7 @@ public class AuthController implements AuthApi, AdminSessionsApi {
     }
 
     @Override
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize(AuthorityConstants.AUTHENTICATED)
     public ResponseEntity<UserResponse> getMe() {
         // @PreAuthorize already guaranteed an authenticated principal; the throw inside
         // currentUserIdOrThrow only fires if something other than JwtCookieAuthenticationFilter
@@ -88,7 +90,7 @@ public class AuthController implements AuthApi, AdminSessionsApi {
     }
 
     @Override
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize(AuthorityConstants.ADMIN)
     public ResponseEntity<SessionListPage> listAdminSessions(String q,
                                                              String sortField,
                                                              String sortDirection,
@@ -101,7 +103,7 @@ public class AuthController implements AuthApi, AdminSessionsApi {
     }
 
     @Override
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize(AuthorityConstants.ADMIN)
     public ResponseEntity<Void> revokeAdminSession(Long sessionId) {
         Long actorId = SecurityContextUtils.currentUserIdOrThrow();
         authService.revokeSession(sessionId, actorId);
@@ -109,10 +111,10 @@ public class AuthController implements AuthApi, AdminSessionsApi {
     }
 
     @Override
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize(AuthorityConstants.ADMIN)
     public ResponseEntity<SessionRevokeAllResponse> revokeAllAdminSessions(String scope) {
         if (!SCOPE_OTHERS.equals(scope)) {
-            throw new BadRequestException("auth.session.scopeMustBeOthers");
+            throw new BadRequestException(ErrorConstants.Auth.SESSION_SCOPE_MUST_BE_OTHERS);
         }
         Long actorId = SecurityContextUtils.currentUserIdOrThrow();
         int affected = authService.revokeAllSessionsExceptActor(actorId);

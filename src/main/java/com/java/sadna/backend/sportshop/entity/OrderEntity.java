@@ -9,6 +9,9 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 import org.hibernate.annotations.Formula;
 
 import java.math.BigDecimal;
@@ -16,6 +19,8 @@ import java.time.OffsetDateTime;
 
 @Entity
 @Table(name = "orders")
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class OrderEntity {
 
     @Id
@@ -74,9 +79,6 @@ public class OrderEntity {
     @Formula("(SELECT COUNT(*) FROM order_items oi WHERE oi.order_id = id)")
     private int itemCount;
 
-    protected OrderEntity() {
-    }
-
     public OrderEntity(Long userId,
                        String status,
                        BigDecimal totalPrice,
@@ -97,77 +99,5 @@ public class OrderEntity {
         this.shippingCountry = shippingCountry;
         this.shippingCity = shippingCity;
         this.shippingAddressLine = shippingAddressLine;
-    }
-
-    public Long getId() {
-        return id;
-    }
-
-    public Long getUserId() {
-        return userId;
-    }
-
-    public UserEntity getUser() {
-        return user;
-    }
-
-    public String getStatus() {
-        return status;
-    }
-
-    public BigDecimal getTotalPrice() {
-        return totalPrice;
-    }
-
-    public String getOrderNumber() {
-        return orderNumber;
-    }
-
-    public String getShippingFullName() {
-        return shippingFullName;
-    }
-
-    public String getShippingEmail() {
-        return shippingEmail;
-    }
-
-    public String getShippingPhone() {
-        return shippingPhone;
-    }
-
-    public String getShippingCountry() {
-        return shippingCountry;
-    }
-
-    public String getShippingCity() {
-        return shippingCity;
-    }
-
-    public String getShippingAddressLine() {
-        return shippingAddressLine;
-    }
-
-    public OffsetDateTime getCreatedAt() {
-        return createdAt;
-    }
-
-    public OffsetDateTime getUpdatedAt() {
-        return updatedAt;
-    }
-
-    public Long getUpdatedBy() {
-        return updatedBy;
-    }
-
-    public OffsetDateTime getCancelledAt() {
-        return cancelledAt;
-    }
-
-    public Long getCancelledBy() {
-        return cancelledBy;
-    }
-
-    public int getItemCount() {
-        return itemCount;
     }
 }

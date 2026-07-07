@@ -5,7 +5,8 @@ import com.java.sadna.backend.sportshop.api.generated.categories.api.CategoriesA
 import com.java.sadna.backend.sportshop.api.generated.categories.model.Category;
 import com.java.sadna.backend.sportshop.api.generated.categories.model.CategorySoftDeleteRequest;
 import com.java.sadna.backend.sportshop.api.generated.categories.model.CategoryWriteRequest;
-import com.java.sadna.backend.sportshop.mapper.CategoryDtoToCategoryMapper;
+import com.java.sadna.backend.sportshop.mapper.dto.response.CategoryDtoToCategoryMapper;
+import com.java.sadna.backend.sportshop.common.constants.AuthorityConstants;
 import com.java.sadna.backend.sportshop.security.SecurityContextUtils;
 import com.java.sadna.backend.sportshop.service.CategoryService;
 import org.springframework.http.ResponseEntity;
@@ -35,7 +36,7 @@ public class CategoryController implements CategoriesApi, AdminCategoriesApi {
     }
 
     @Override
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize(AuthorityConstants.ADMIN)
     public ResponseEntity<List<Category>> listAdminCategories() {
         List<Category> body = categoryService.list(null).stream()
                 .map(categoryDtoToCategoryMapper::map)
@@ -44,18 +45,17 @@ public class CategoryController implements CategoriesApi, AdminCategoriesApi {
     }
 
     @Override
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize(AuthorityConstants.ADMIN)
     public ResponseEntity<Category> createAdminCategory(CategoryWriteRequest req) {
-        Long actorId = SecurityContextUtils.currentUserIdOrThrow();
         return ResponseEntity.ok(
                 categoryDtoToCategoryMapper.map(
-                        categoryService.createCategory(req.getName(), req.getIcon(), actorId)
+                        categoryService.createCategory(req.getName(), req.getIcon())
                 )
         );
     }
 
     @Override
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize(AuthorityConstants.ADMIN)
     public ResponseEntity<Category> updateAdminCategory(Long id, CategoryWriteRequest req) {
         Long actorId = SecurityContextUtils.currentUserIdOrThrow();
         return ResponseEntity.ok(
@@ -66,7 +66,7 @@ public class CategoryController implements CategoriesApi, AdminCategoriesApi {
     }
 
     @Override
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize(AuthorityConstants.ADMIN)
     public ResponseEntity<Category> softDeleteAdminCategory(Long id, CategorySoftDeleteRequest req) {
         Long actorId = SecurityContextUtils.currentUserIdOrThrow();
         return ResponseEntity.ok(
@@ -77,7 +77,7 @@ public class CategoryController implements CategoriesApi, AdminCategoriesApi {
     }
 
     @Override
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize(AuthorityConstants.ADMIN)
     public ResponseEntity<Category> restoreAdminCategory(Long id) {
         Long actorId = SecurityContextUtils.currentUserIdOrThrow();
         return ResponseEntity.ok(

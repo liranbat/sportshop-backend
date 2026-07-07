@@ -14,7 +14,11 @@ public class OrderNumberGenerator {
     private static final int TAIL_LENGTH = 10;
     private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("yyyyMMdd").withZone(ZoneOffset.UTC);
 
-    private final SecureRandom rng = new SecureRandom();
+    private final SecureRandom rng;
+
+    public OrderNumberGenerator(SecureRandom rng) {
+        this.rng = rng;
+    }
 
     // ORD-YYYYMMDD-XXXXXXXXXX (23 chars). 36^10 candidate space per UTC day.
     public String generate() {

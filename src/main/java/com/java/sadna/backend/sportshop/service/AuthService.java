@@ -2,13 +2,20 @@ package com.java.sadna.backend.sportshop.service;
 
 import com.java.sadna.backend.sportshop.api.generated.authusers.model.LoginRequest;
 import com.java.sadna.backend.sportshop.api.generated.authusers.model.RegisterRequest;
-import com.java.sadna.backend.sportshop.config.AppProperties;
+import com.java.sadna.backend.sportshop.common.constants.ErrorConstants;
+import com.java.sadna.backend.sportshop.common.constants.PageSizeConstants;
+import com.java.sadna.backend.sportshop.common.constants.RefreshTokenConstants;
+import com.java.sadna.backend.sportshop.common.constants.UserConstants;
+import com.java.sadna.backend.sportshop.common.util.SortDirections;
+import com.java.sadna.backend.sportshop.common.util.SortResolver;
+import com.java.sadna.backend.sportshop.config.AuthProperties;
+import com.java.sadna.backend.sportshop.config.PaginationProperties;
 import com.java.sadna.backend.sportshop.entity.RefreshTokenEntity;
 import com.java.sadna.backend.sportshop.entity.UserEntity;
 import com.java.sadna.backend.sportshop.exception.ConflictException;
 import com.java.sadna.backend.sportshop.exception.UnauthorizedException;
-import com.java.sadna.backend.sportshop.mapper.RefreshTokenEntityToSessionDtoMapper;
-import com.java.sadna.backend.sportshop.mapper.UserEntityToUserDtoMapper;
+import com.java.sadna.backend.sportshop.mapper.entity.dto.RefreshTokenEntityToSessionDtoMapper;
+import com.java.sadna.backend.sportshop.mapper.entity.dto.UserEntityToUserDtoMapper;
 import com.java.sadna.backend.sportshop.model.PagedResult;
 import com.java.sadna.backend.sportshop.model.SessionDto;
 import com.java.sadna.backend.sportshop.model.UserDto;
@@ -29,24 +36,20 @@ import java.security.SecureRandom;
 import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.Base64;
+import java.util.List;
+import java.util.Map;
 
 @Service
 public class AuthService {
 
-    private static final String SORT_FIELD_USER = "user";
-    private static final String SORT_FIELD_EXPIRES_AT = "expiresAt";
-    private static final String SORT_PATH_ID = "id";
-    private static final String SORT_PATH_EXPIRES_AT = "expiresAt";
-    private static final String SORT_PATH_USER_EMAIL = "user.email";
-    private static final String SORT_DIRECTION_ASC = "asc";
-    private static final String SORT_DIRECTION_DESC = "desc";
-
-    private static final int DEFAULT_SESSION_PAGE_SIZE = 20;
-
-    // 32 bytes = 256 bits of entropy -- far beyond what's practical to guess
-    // even with the unbounded validity window between issuance and rotation.
-    private static final int REFRESH_TOKEN_BYTES = 32;
-    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
+    private static final SortResolver SESSION_SORT_RESOLVER = new SortResolver(
+            Map.of(
+                    RefreshTokenConstants.Sort.USER, List.of(RefreshTokenConstants.USER + "." + UserConstants.EMAIL),
+                    RefreshTokenConstants.Sort.EXPIRES_AT, List.of(RefreshTokenConstants.EXPIRES_AT)
+            ),
+            SortResolver.orders(RefreshTokenConstants.EXPIRES_AT, SortDirections.DESC, RefreshTokenConstants.ID, SortDirections.ASC),
+            SortResolver.orders(RefreshTokenConstants.ID, SortDirections.ASC)
+    );
 
     private final UserRepository userRepository;
     private final RefreshTokenRepository refreshTokenRepository;
@@ -56,7 +59,10 @@ public class AuthService {
     private final PaginationService paginationService;
     private final UserEntityToUserDtoMapper userEntityToUserDtoMapper;
     private final RefreshTokenEntityToSessionDtoMapper refreshTokenEntityToSessionDtoMapper;
+    private final SecureRandom secureRandom;
     private final Duration refreshTokenTtl;
+    private final int refreshTokenBytes;
+    private final int defaultSessionPageSize;
 
     public AuthService(UserRepository userRepository,
                        RefreshTokenRepository refreshTokenRepository,
@@ -66,7 +72,9 @@ public class AuthService {
                        PaginationService paginationService,
                        UserEntityToUserDtoMapper userEntityToUserDtoMapper,
                        RefreshTokenEntityToSessionDtoMapper refreshTokenEntityToSessionDtoMapper,
-                       AppProperties appProperties) {
+                       SecureRandom secureRandom,
+                       AuthProperties authProperties,
+                       PaginationProperties paginationProperties) {
         this.userRepository = userRepository;
         this.refreshTokenRepository = refreshTokenRepository;
         this.passwordEncoder = passwordEncoder;
@@ -75,14 +83,18 @@ public class AuthService {
         this.paginationService = paginationService;
         this.userEntityToUserDtoMapper = userEntityToUserDtoMapper;
         this.refreshTokenEntityToSessionDtoMapper = refreshTokenEntityToSessionDtoMapper;
-        this.refreshTokenTtl = appProperties.getAuth().getRefreshTokenTtl();
+        this.secureRandom = secureRandom;
+        this.refreshTokenTtl = authProperties.getRefreshTokenTtl();
+        this.refreshTokenBytes = authProperties.getRefreshTokenBytes();
+        this.defaultSessionPageSize = paginationProperties.getDefaultPageSize()
+                .getOrDefault(PageSizeConstants.SESSIONS_KEY, PageSizeConstants.SESSIONS_DEFAULT);
     }
 
     @Transactional
     public UserDto register(RegisterRequest dto) {
         String email = normalizeEmail(dto.getEmail());
         if (userRepository.existsByEmail(email)) {
-            throw new ConflictException("auth.emailTaken");
+            throw new ConflictException(ErrorConstants.Auth.EMAIL_TAKEN);
         }
         UserEntity entity = new UserEntity(
                 dto.getFirstName(),
@@ -99,9 +111,9 @@ public class AuthService {
     @Transactional
     public UserDto login(LoginRequest dto, HttpServletResponse response) {
         UserEntity entity = userRepository.findByEmailAndDeletedFalse(normalizeEmail(dto.getEmail()))
-                .orElseThrow(() -> new UnauthorizedException("auth.invalidCredentials"));
+                .orElseThrow(() -> new UnauthorizedException(ErrorConstants.Auth.INVALID_CREDENTIALS));
         if (!passwordEncoder.matches(dto.getPassword(), entity.getPasswordHash())) {
-            throw new UnauthorizedException("auth.invalidCredentials");
+            throw new UnauthorizedException(ErrorConstants.Auth.INVALID_CREDENTIALS);
         }
         issueSession(entity, response);
         return userEntityToUserDtoMapper.map(entity);
@@ -112,7 +124,7 @@ public class AuthService {
         if (userIdOrNull != null) {
             refreshTokenRepository.deleteByUserId(userIdOrNull);
         }
-        attachClearedCookies(response);
+        cookieService.clearAuthCookies(response);
     }
 
     @Transactional
@@ -120,17 +132,17 @@ public class AuthService {
         // Missing / unknown / expired all surface the same message so an attacker
         // probing /auth/refresh cannot tell whether a cookie was even present.
         String refreshTokenValue = cookieService.readRefreshCookie(request)
-                .orElseThrow(() -> new UnauthorizedException("auth.invalidRefresh"));
+                .orElseThrow(() -> new UnauthorizedException(ErrorConstants.Auth.INVALID_REFRESH));
         RefreshTokenEntity row = refreshTokenRepository.findByToken(refreshTokenValue)
-                .orElseThrow(() -> new UnauthorizedException("auth.invalidRefresh"));
+                .orElseThrow(() -> new UnauthorizedException(ErrorConstants.Auth.INVALID_REFRESH));
         if (row.getExpiresAt().isBefore(OffsetDateTime.now())) {
             // Drop the dead row eagerly so /auth/refresh stops finding it on
             // subsequent retries and the user is forced through full login.
             refreshTokenRepository.delete(row);
-            throw new UnauthorizedException("auth.invalidRefresh");
+            throw new UnauthorizedException(ErrorConstants.Auth.INVALID_REFRESH);
         }
         UserEntity user = userRepository.findByIdAndDeletedFalse(row.getUserId())
-                .orElseThrow(() -> new UnauthorizedException("auth.invalidRefresh"));
+                .orElseThrow(() -> new UnauthorizedException(ErrorConstants.Auth.INVALID_REFRESH));
 
         String newRefreshToken = generateRefreshTokenValue();
         OffsetDateTime newExpiresAt = OffsetDateTime.now().plus(refreshTokenTtl);
@@ -146,7 +158,7 @@ public class AuthService {
     @Transactional(readOnly = true)
     public UserDto getMe(Long userId) {
         UserEntity entity = userRepository.findByIdAndDeletedFalse(userId)
-                .orElseThrow(() -> new UnauthorizedException("auth.session.invalidSession"));
+                .orElseThrow(() -> new UnauthorizedException(ErrorConstants.Auth.SESSION_INVALID));
         return userEntityToUserDtoMapper.map(entity);
     }
 
@@ -159,9 +171,9 @@ public class AuthService {
         Specification<RefreshTokenEntity> spec = Specification.allOf(
                 SessionSpecifications.searchMatches(q)
         );
-        Sort sort = buildSessionSort(sortField, sortDirection);
+        Sort sort = SESSION_SORT_RESOLVER.resolve(sortField, sortDirection);
         return paginationService.paginate(
-                refreshTokenRepository, spec, sort, page, pageSize, DEFAULT_SESSION_PAGE_SIZE,
+                refreshTokenRepository, spec, sort, page, pageSize, defaultSessionPageSize,
                 refreshTokenEntityToSessionDtoMapper
         );
     }
@@ -170,7 +182,7 @@ public class AuthService {
     public void revokeSession(Long sessionId, Long actorId) {
         int deleted = refreshTokenRepository.deleteByIdExcludingActor(sessionId, actorId);
         if (deleted == 0) {
-            throw new ConflictException("auth.session.revokeConflict");
+            throw new ConflictException(ErrorConstants.Auth.SESSION_REVOKE_CONFLICT);
         }
     }
 
@@ -204,38 +216,13 @@ public class AuthService {
         response.addHeader(HttpHeaders.SET_COOKIE, refresh.toString());
     }
 
-    private void attachClearedCookies(HttpServletResponse response) {
-        response.addHeader(HttpHeaders.SET_COOKIE, cookieService.clearAccessCookie().toString());
-        response.addHeader(HttpHeaders.SET_COOKIE, cookieService.clearRefreshCookie().toString());
-    }
-
     private String generateRefreshTokenValue() {
-        byte[] bytes = new byte[REFRESH_TOKEN_BYTES];
-        SECURE_RANDOM.nextBytes(bytes);
+        byte[] bytes = new byte[refreshTokenBytes];
+        secureRandom.nextBytes(bytes);
         return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
     }
 
     private static String normalizeEmail(String raw) {
         return raw == null ? null : raw.trim().toLowerCase();
-    }
-
-    private Sort buildSessionSort(String sortField, String sortDirection) {
-        if (sortField == null || sortField.isBlank() || SORT_FIELD_EXPIRES_AT.equalsIgnoreCase(sortField)) {
-            Sort.Direction dir = sessionDirectionFor(sortDirection, Sort.Direction.DESC);
-            return Sort.by(new Sort.Order(dir, SORT_PATH_EXPIRES_AT), Sort.Order.asc(SORT_PATH_ID));
-        }
-        if (SORT_FIELD_USER.equalsIgnoreCase(sortField)) {
-            Sort.Direction dir = sessionDirectionFor(sortDirection, Sort.Direction.ASC);
-            return Sort.by(new Sort.Order(dir, SORT_PATH_USER_EMAIL), Sort.Order.asc(SORT_PATH_ID));
-        }
-        Sort.Direction dir = sessionDirectionFor(sortDirection, Sort.Direction.DESC);
-        return Sort.by(new Sort.Order(dir, SORT_PATH_EXPIRES_AT), Sort.Order.asc(SORT_PATH_ID));
-    }
-
-    private Sort.Direction sessionDirectionFor(String sortDirection, Sort.Direction fieldDefault) {
-        if (sortDirection == null || sortDirection.isBlank()) return fieldDefault;
-        if (SORT_DIRECTION_ASC.equalsIgnoreCase(sortDirection)) return Sort.Direction.ASC;
-        if (SORT_DIRECTION_DESC.equalsIgnoreCase(sortDirection)) return Sort.Direction.DESC;
-        return fieldDefault;
     }
 }

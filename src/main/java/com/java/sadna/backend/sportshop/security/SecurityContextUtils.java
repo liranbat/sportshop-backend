@@ -31,6 +31,6 @@ public final class SecurityContextUtils {
         }
         return auth.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
-                .anyMatch(JwtCookieAuthenticationFilter.AUTHORITY_ADMIN::equals);
+                .anyMatch(Role.ADMIN.authority()::equals);
     }
 }

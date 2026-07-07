@@ -7,12 +7,13 @@ import com.java.sadna.backend.sportshop.api.generated.orders.model.OrderListPage
 import com.java.sadna.backend.sportshop.api.generated.orders.model.OrderStatus;
 import com.java.sadna.backend.sportshop.api.generated.orders.model.UpdateOrderStatusRequest;
 import com.java.sadna.backend.sportshop.api.generated.orders.model.UpdateShippingAddressRequest;
-import com.java.sadna.backend.sportshop.mapper.OrderDetailDtoToOrderDetailMapper;
-import com.java.sadna.backend.sportshop.mapper.OrderShippingToShippingDetailsDtoMapper;
-import com.java.sadna.backend.sportshop.mapper.PagedOrderSummaryDtoToOrderListPageMapper;
+import com.java.sadna.backend.sportshop.mapper.dto.response.PagedOrderSummaryDtoToOrderListPageMapper;
+import com.java.sadna.backend.sportshop.mapper.request.dto.OrderShippingToShippingDetailsDtoMapper;
+import com.java.sadna.backend.sportshop.mapper.dto.response.OrderDetailDtoToOrderDetailMapper;
 import com.java.sadna.backend.sportshop.model.OrderDetailDto;
 import com.java.sadna.backend.sportshop.model.OrderSummaryDto;
 import com.java.sadna.backend.sportshop.model.PagedResult;
+import com.java.sadna.backend.sportshop.common.constants.AuthorityConstants;
 import com.java.sadna.backend.sportshop.security.SecurityContextUtils;
 import com.java.sadna.backend.sportshop.service.OrderService;
 import org.springframework.http.ResponseEntity;
@@ -41,7 +42,7 @@ public class OrderController implements OrdersApi, AdminOrdersApi {
     }
 
     @Override
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize(AuthorityConstants.AUTHENTICATED)
     public ResponseEntity<OrderListPage> listOrders(OrderStatus status,
                                                     String orderNumber,
                                                     BigDecimal amountMin,
@@ -71,7 +72,7 @@ public class OrderController implements OrdersApi, AdminOrdersApi {
     }
 
     @Override
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize(AuthorityConstants.AUTHENTICATED)
     public ResponseEntity<OrderDetail> getOrder(String orderNumber) {
         Long userId = SecurityContextUtils.currentUserIdOrThrow();
         OrderDetailDto detail = orderService.getDetail(orderNumber, userId);
@@ -79,7 +80,7 @@ public class OrderController implements OrdersApi, AdminOrdersApi {
     }
 
     @Override
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize(AuthorityConstants.AUTHENTICATED)
     public ResponseEntity<Void> cancelOrder(String orderNumber) {
         Long userId = SecurityContextUtils.currentUserIdOrThrow();
         orderService.cancel(orderNumber, userId, userId);
@@ -87,7 +88,7 @@ public class OrderController implements OrdersApi, AdminOrdersApi {
     }
 
     @Override
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize(AuthorityConstants.ADMIN)
     public ResponseEntity<OrderListPage> listAdminOrders(OrderStatus status,
                                                          String orderNumber,
                                                          String customer,
@@ -117,14 +118,14 @@ public class OrderController implements OrdersApi, AdminOrdersApi {
     }
 
     @Override
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize(AuthorityConstants.ADMIN)
     public ResponseEntity<OrderDetail> getAdminOrder(String orderNumber) {
         OrderDetailDto detail = orderService.getDetail(orderNumber, null);
         return ResponseEntity.ok(orderDetailDtoToOrderDetailMapper.map(detail));
     }
 
     @Override
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize(AuthorityConstants.ADMIN)
     public ResponseEntity<Void> cancelAdminOrder(String orderNumber) {
         Long adminId = SecurityContextUtils.currentUserIdOrThrow();
         orderService.cancel(orderNumber, null, adminId);
@@ -132,7 +133,7 @@ public class OrderController implements OrdersApi, AdminOrdersApi {
     }
 
     @Override
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize(AuthorityConstants.ADMIN)
     public ResponseEntity<Void> updateAdminOrderStatus(String orderNumber, UpdateOrderStatusRequest body) {
         Long adminId = SecurityContextUtils.currentUserIdOrThrow();
         orderService.updateStatus(
@@ -145,7 +146,7 @@ public class OrderController implements OrdersApi, AdminOrdersApi {
     }
 
     @Override
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize(AuthorityConstants.ADMIN)
     public ResponseEntity<Void> updateAdminOrderShipping(String orderNumber, UpdateShippingAddressRequest body) {
         Long adminId = SecurityContextUtils.currentUserIdOrThrow();
         orderService.updateShipping(

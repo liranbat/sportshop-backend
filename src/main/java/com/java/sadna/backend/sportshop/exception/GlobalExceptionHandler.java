@@ -1,7 +1,8 @@
 package com.java.sadna.backend.sportshop.exception;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.java.sadna.backend.sportshop.common.constants.ErrorConstants;
+import com.java.sadna.backend.sportshop.config.TraceIdResponseHeaderFilter;
+import lombok.extern.slf4j.Slf4j;
 import org.slf4j.MDC;
 import org.springframework.context.MessageSource;
 import org.springframework.http.HttpHeaders;
@@ -30,11 +31,9 @@ import java.util.Locale;
 import java.util.stream.Collectors;
 
 @RestControllerAdvice
+@Slf4j
 public class GlobalExceptionHandler {
 
-    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
-
-    private static final String MDC_TRACE_ID = "traceId";
     private static final String TRACE_ID_UNKNOWN = "unknown";
     private static final Object[] NO_ARGS = new Object[0];
     private static final Locale MESSAGES_LOCALE = Locale.ROOT;
@@ -46,7 +45,7 @@ public class GlobalExceptionHandler {
     }
 
     private static String currentTraceId() {
-        String id = MDC.get(MDC_TRACE_ID);
+        String id = MDC.get(TraceIdResponseHeaderFilter.MDC_TRACE_ID);
         return (id != null && !id.isEmpty()) ? id : TRACE_ID_UNKNOWN;
     }
 
@@ -77,7 +76,7 @@ public class GlobalExceptionHandler {
         boolean anonymous = auth == null || auth instanceof AnonymousAuthenticationToken || !auth.isAuthenticated();
         HttpStatus status = anonymous ? HttpStatus.UNAUTHORIZED : HttpStatus.FORBIDDEN;
         String code = anonymous ? "UNAUTHORIZED" : "FORBIDDEN";
-        String message = resolve(anonymous ? "http.unauthorized" : "http.forbidden");
+        String message = resolve(anonymous ? ErrorConstants.Http.UNAUTHORIZED : ErrorConstants.Http.FORBIDDEN);
         log.debug("Access denied [status={}]: {}", status.value(), e.getMessage());
         ApiError body = new ApiError(OffsetDateTime.now(), currentTraceId(), code, message);
         return ResponseEntity.status(status).body(body);
@@ -86,7 +85,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public ResponseEntity<ApiError> handleTypeMismatch(MethodArgumentTypeMismatchException e) {
         log.debug("Bad request param [name={}, value={}]: {}", e.getName(), e.getValue(), e.getMessage());
-        String message = resolve("http.badRequest.typeMismatch", e.getValue(), e.getName());
+        String message = resolve(ErrorConstants.Http.BAD_REQUEST_TYPE_MISMATCH, e.getValue(), e.getName());
         ApiError body = new ApiError(OffsetDateTime.now(), currentTraceId(), "BAD_REQUEST", message);
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
     }
@@ -97,7 +96,7 @@ public class GlobalExceptionHandler {
                 .map(this::formatFieldError)
                 .collect(Collectors.joining("; "));
         if (message.isEmpty()) {
-            message = resolve("http.badRequest.validationFailed");
+            message = resolve(ErrorConstants.Http.BAD_REQUEST_VALIDATION_FAILED);
         }
         log.debug("Validation failed: {}", message);
         ApiError body = new ApiError(OffsetDateTime.now(), currentTraceId(), "BAD_REQUEST", message);
@@ -115,7 +114,7 @@ public class GlobalExceptionHandler {
                 .map(this::formatConstraintViolation)
                 .collect(Collectors.joining("; "));
         if (message.isEmpty()) {
-            message = resolve("http.badRequest.constraintFailed");
+            message = resolve(ErrorConstants.Http.BAD_REQUEST_CONSTRAINT_FAILED);
         }
         log.debug("Constraint violation: {}", message);
         ApiError body = new ApiError(OffsetDateTime.now(), currentTraceId(), "BAD_REQUEST", message);
@@ -134,7 +133,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(MissingServletRequestParameterException.class)
     public ResponseEntity<ApiError> handleMissingParam(MissingServletRequestParameterException e) {
         log.debug("Missing required parameter [name={}]: {}", e.getParameterName(), e.getMessage());
-        String message = resolve("http.badRequest.missingParam", e.getParameterName());
+        String message = resolve(ErrorConstants.Http.BAD_REQUEST_MISSING_PARAM, e.getParameterName());
         ApiError body = new ApiError(OffsetDateTime.now(), currentTraceId(), "BAD_REQUEST", message);
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
     }
@@ -146,7 +145,7 @@ public class GlobalExceptionHandler {
                 OffsetDateTime.now(),
                 currentTraceId(),
                 "BAD_REQUEST",
-                resolve("http.badRequest.malformedBody")
+                resolve(ErrorConstants.Http.BAD_REQUEST_MALFORMED_BODY)
         );
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
     }
@@ -154,7 +153,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
     public ResponseEntity<ApiError> handleMethodNotSupported(HttpRequestMethodNotSupportedException e) {
         log.debug("Method not supported [method={}]: {}", e.getMethod(), e.getMessage());
-        String message = resolve("http.methodNotAllowed", e.getMethod());
+        String message = resolve(ErrorConstants.Http.METHOD_NOT_ALLOWED, e.getMethod());
         ApiError body = new ApiError(OffsetDateTime.now(), currentTraceId(), "METHOD_NOT_ALLOWED", message);
         HttpHeaders headers = new HttpHeaders();
         if (e.getSupportedHttpMethods() != null) {
@@ -170,7 +169,7 @@ public class GlobalExceptionHandler {
                 OffsetDateTime.now(),
                 currentTraceId(),
                 "IMAGE_FILE_TOO_LARGE",
-                resolve("http.payloadTooLarge.upload")
+                resolve(ErrorConstants.Http.PAYLOAD_TOO_LARGE_UPLOAD)
         );
         return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE).body(body);
     }
@@ -179,8 +178,8 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiError> handleMediaTypeNotSupported(HttpMediaTypeNotSupportedException e) {
         log.debug("Unsupported media type [contentType={}]: {}", e.getContentType(), e.getMessage());
         String message = e.getContentType() != null
-                ? resolve("http.mediaType.unsupported", e.getContentType())
-                : resolve("http.mediaType.missing");
+                ? resolve(ErrorConstants.Http.MEDIA_TYPE_UNSUPPORTED, e.getContentType())
+                : resolve(ErrorConstants.Http.MEDIA_TYPE_MISSING);
         ApiError body = new ApiError(OffsetDateTime.now(), currentTraceId(), "UNSUPPORTED_MEDIA_TYPE", message);
         HttpHeaders headers = new HttpHeaders();
         if (!e.getSupportedMediaTypes().isEmpty()) {
@@ -196,7 +195,7 @@ public class GlobalExceptionHandler {
                 OffsetDateTime.now(),
                 currentTraceId(),
                 "NOT_FOUND",
-                resolve("http.notFound.default")
+                resolve(ErrorConstants.Http.NOT_FOUND_DEFAULT)
         );
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(body);
     }
@@ -208,7 +207,7 @@ public class GlobalExceptionHandler {
                 OffsetDateTime.now(),
                 currentTraceId(),
                 "INTERNAL_SERVER_ERROR",
-                resolve("http.internalError")
+                resolve(ErrorConstants.Http.INTERNAL_ERROR)
         );
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(body);
     }

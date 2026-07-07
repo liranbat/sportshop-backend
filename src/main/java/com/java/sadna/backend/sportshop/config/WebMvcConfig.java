@@ -1,6 +1,6 @@
 package com.java.sadna.backend.sportshop.config;
 
-import com.java.sadna.backend.sportshop.security.JwtCookieAuthenticationFilter;
+import com.java.sadna.backend.sportshop.common.constants.ApiHeaderConstants;
 import org.springframework.boot.autoconfigure.security.SecurityProperties;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
@@ -25,35 +25,39 @@ import java.nio.file.Path;
 @Configuration
 public class WebMvcConfig implements WebMvcConfigurer {
 
-    private final AppProperties props;
+    private final ApiProperties api;
+    private final CorsProperties cors;
+    private final ImagesProperties images;
 
-    public WebMvcConfig(AppProperties props) {
-        this.props = props;
+    public WebMvcConfig(ApiProperties api, CorsProperties cors, ImagesProperties images) {
+        this.api = api;
+        this.cors = cors;
+        this.images = images;
     }
 
     @Override
     public void configurePathMatch(@NonNull PathMatchConfigurer configurer) {
         configurer.addPathPrefix(
-                props.getApi().getPathPrefix(),
+                api.getPathPrefix(),
                 HandlerTypePredicate.forAnnotation(RestController.class));
     }
 
     @Override
     public void addCorsMappings(CorsRegistry registry) {
-        registry.addMapping(props.getApi().getPathPrefix() + "/**")
-                .allowedOrigins(props.getCors().getAllowedOrigins().toArray(String[]::new))
+        registry.addMapping(api.getPathPrefix() + "/**")
+                .allowedOrigins(cors.getAllowedOrigins().toArray(String[]::new))
                 .allowedMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
                 .allowedHeaders("*")
                 .exposedHeaders(
-                        TraceIdResponseHeaderFilter.HEADER,
-                        JwtCookieAuthenticationFilter.ROLE_HEADER)
+                        ApiHeaderConstants.X_TRACE_ID,
+                        ApiHeaderConstants.X_AUTH_ROLE)
                 .allowCredentials(true);
     }
 
     @Override
     public void addResourceHandlers(@NonNull ResourceHandlerRegistry registry) {
-        String urlPrefix = props.getImages().getUrlPrefix();
-        Path absoluteDir = Path.of(props.getImages().getLocalDir()).toAbsolutePath().normalize();
+        String urlPrefix = images.getUrlPrefix();
+        Path absoluteDir = Path.of(images.getLocalDir()).toAbsolutePath().normalize();
         String location = absoluteDir.toUri().toString();
 
         registry.addResourceHandler("/" + urlPrefix + "/**")
@@ -63,8 +67,8 @@ public class WebMvcConfig implements WebMvcConfigurer {
     @Bean
     public FilterRegistrationBean<ImageResponseHeadersFilter> imageResponseHeadersFilterRegistration() {
         FilterRegistrationBean<ImageResponseHeadersFilter> registration =
-                new FilterRegistrationBean<>(new ImageResponseHeadersFilter(props));
-        registration.addUrlPatterns("/" + props.getImages().getUrlPrefix() + "/*");
+                new FilterRegistrationBean<>(new ImageResponseHeadersFilter(images));
+        registration.addUrlPatterns("/" + images.getUrlPrefix() + "/*");
         registration.setOrder(SecurityProperties.DEFAULT_FILTER_ORDER - 1);
         registration.setName("imageResponseHeadersFilter");
         return registration;

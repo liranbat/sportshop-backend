@@ -1,10 +1,15 @@
 package com.java.sadna.backend.sportshop.model;
 
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.List;
 
-public class OrderDetailDto implements BaseDto {
+@Getter
+@RequiredArgsConstructor
+public class OrderDetailDto {
 
     private final String orderNumber;
     private final String status;
@@ -16,66 +21,4 @@ public class OrderDetailDto implements BaseDto {
     private final ShippingDetailsDto shipping;
     private final OrderPaymentDto payment;
     private final CustomerForOrderDto customer;
-
-    public OrderDetailDto(String orderNumber,
-                          String status,
-                          OffsetDateTime createdAt,
-                          OffsetDateTime cancelledAt,
-                          BigDecimal totalPrice,
-                          int itemCount,
-                          List<OrderItemDto> items,
-                          ShippingDetailsDto shipping,
-                          OrderPaymentDto payment,
-                          CustomerForOrderDto customer) {
-        this.orderNumber = orderNumber;
-        this.status = status;
-        this.createdAt = createdAt;
-        this.cancelledAt = cancelledAt;
-        this.totalPrice = totalPrice;
-        this.itemCount = itemCount;
-        this.items = items;
-        this.shipping = shipping;
-        this.payment = payment;
-        this.customer = customer;
-    }
-
-    public String getOrderNumber() {
-        return orderNumber;
-    }
-
-    public String getStatus() {
-        return status;
-    }
-
-    public OffsetDateTime getCreatedAt() {
-        return createdAt;
-    }
-
-    public OffsetDateTime getCancelledAt() {
-        return cancelledAt;
-    }
-
-    public BigDecimal getTotalPrice() {
-        return totalPrice;
-    }
-
-    public int getItemCount() {
-        return itemCount;
-    }
-
-    public List<OrderItemDto> getItems() {
-        return items;
-    }
-
-    public ShippingDetailsDto getShipping() {
-        return shipping;
-    }
-
-    public OrderPaymentDto getPayment() {
-        return payment;
-    }
-
-    public CustomerForOrderDto getCustomer() {
-        return customer;
-    }
 }

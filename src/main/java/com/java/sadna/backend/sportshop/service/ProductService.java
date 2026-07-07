@@ -1,15 +1,21 @@
 package com.java.sadna.backend.sportshop.service;
 
-import com.java.sadna.backend.sportshop.config.AppProperties;
+import com.java.sadna.backend.sportshop.common.constants.CategoryConstants;
+import com.java.sadna.backend.sportshop.common.constants.ErrorConstants;
+import com.java.sadna.backend.sportshop.common.constants.PageSizeConstants;
+import com.java.sadna.backend.sportshop.common.constants.ProductConstants;
+import com.java.sadna.backend.sportshop.common.util.SortDirections;
+import com.java.sadna.backend.sportshop.common.util.SortResolver;
 import com.java.sadna.backend.sportshop.config.ImagesProperties;
+import com.java.sadna.backend.sportshop.config.PaginationProperties;
 import com.java.sadna.backend.sportshop.entity.CategoryEntity;
 import com.java.sadna.backend.sportshop.entity.ProductEntity;
 import com.java.sadna.backend.sportshop.entity.ProductStockEntity;
 import com.java.sadna.backend.sportshop.exception.BadRequestException;
 import com.java.sadna.backend.sportshop.exception.ConflictException;
 import com.java.sadna.backend.sportshop.exception.NotFoundException;
-import com.java.sadna.backend.sportshop.mapper.ProductEntityToProductDtoMapper;
-import com.java.sadna.backend.sportshop.mapper.ProductStockEntityToProductSizeDtoMapper;
+import com.java.sadna.backend.sportshop.mapper.entity.dto.ProductEntityToProductDtoMapper;
+import com.java.sadna.backend.sportshop.mapper.entity.dto.ProductStockEntityToProductSizeDtoMapper;
 import com.java.sadna.backend.sportshop.model.PagedResult;
 import com.java.sadna.backend.sportshop.model.ProductCreateRequestDto;
 import com.java.sadna.backend.sportshop.model.ProductDetailDto;
@@ -36,17 +42,17 @@ import java.util.Map;
 @Service
 public class ProductService {
 
-    private static final String SORT_FIELD_ID = "id";
-    private static final String SORT_FIELD_NAME = "name";
-    private static final String SORT_FIELD_PRICE = "price";
-    private static final String SORT_FIELD_CATEGORY = "category";
-    private static final String SORT_FIELD_UPDATED_AT = "updatedAt";
-    // JPA path resolved via the read-only ManyToOne CategoryEntity association on ProductEntity.
-    private static final String SORT_PATH_CATEGORY_NAME = "category.name";
-    private static final String SORT_DIRECTION_DESC = "desc";
+    private static final SortResolver SORT_RESOLVER = new SortResolver(
+            Map.of(
+                    ProductConstants.Sort.PRICE, List.of(ProductConstants.PRICE),
+                    ProductConstants.Sort.NAME, List.of(ProductConstants.NAME),
+                    ProductConstants.Sort.CATEGORY, List.of(ProductConstants.CATEGORY + "." + CategoryConstants.NAME),
+                    ProductConstants.Sort.UPDATED_AT, List.of(ProductConstants.UPDATED_AT)
+            ),
+            SortResolver.orders(ProductConstants.ID, SortDirections.ASC),
+            SortResolver.orders(ProductConstants.ID, SortDirections.ASC)
+    );
 
-    private static final int DEFAULT_PAGE_SIZE = 9;
-    private static final String ONE_SIZE_TOKEN = "ONE_SIZE";
     private static final int SIZE_TOKEN_MAX_LENGTH = 20;
 
     private final ProductRepository productRepository;
@@ -57,6 +63,7 @@ public class ProductService {
     private final ProductStockEntityToProductSizeDtoMapper productStockEntityToProductSizeDtoMapper;
     private final PaginationService paginationService;
     private final ImagesProperties imagesProperties;
+    private final int defaultPageSize;
 
     public ProductService(ProductRepository productRepository,
                           CategoryRepository categoryRepository,
@@ -65,7 +72,8 @@ public class ProductService {
                           ProductEntityToProductDtoMapper productEntityToProductDtoMapper,
                           ProductStockEntityToProductSizeDtoMapper productStockEntityToProductSizeDtoMapper,
                           PaginationService paginationService,
-                          AppProperties appProperties) {
+                          ImagesProperties imagesProperties,
+                          PaginationProperties paginationProperties) {
         this.productRepository = productRepository;
         this.categoryRepository = categoryRepository;
         this.productStockRepository = productStockRepository;
@@ -73,7 +81,9 @@ public class ProductService {
         this.productEntityToProductDtoMapper = productEntityToProductDtoMapper;
         this.productStockEntityToProductSizeDtoMapper = productStockEntityToProductSizeDtoMapper;
         this.paginationService = paginationService;
-        this.imagesProperties = appProperties.getImages();
+        this.imagesProperties = imagesProperties;
+        this.defaultPageSize = paginationProperties.getDefaultPageSize()
+                .getOrDefault(PageSizeConstants.PRODUCTS_KEY, PageSizeConstants.PRODUCTS_DEFAULT);
     }
 
     @Transactional(readOnly = true)
@@ -96,9 +106,9 @@ public class ProductService {
                 ProductSpecifications.priceLte(priceMax)
         );
 
-        Sort sort = buildSort(sortField, sortDirection);
+        Sort sort = SORT_RESOLVER.resolve(sortField, sortDirection);
         return paginationService.paginate(
-                productRepository, spec, sort, page, pageSize, DEFAULT_PAGE_SIZE,
+                productRepository, spec, sort, page, pageSize, defaultPageSize,
                 productEntityToProductDtoMapper
         );
     }
@@ -135,9 +145,9 @@ public class ProductService {
     @Transactional
     public ProductDetailDto update(Long productId, ProductUpdateRequestDto input, Long actorId) {
         ProductEntity product = productRepository.findById(productId)
-                .orElseThrow(() -> new NotFoundException("product.notFound", productId));
+                .orElseThrow(() -> new NotFoundException(ErrorConstants.Product.NOT_FOUND, productId));
         if (product.getVersion() != input.getVersion()) {
-            throw new ConflictException("product.versionMismatch");
+            throw new ConflictException(ErrorConstants.Product.VERSION_MISMATCH);
         }
         boolean wasMultiSize = product.isMultiSize();
 
@@ -158,7 +168,7 @@ public class ProductService {
         if (wasMultiSize != input.isMultiSize()) {
             productStockRepository.deleteAllByProductId(productId);
             if (!input.isMultiSize()) {
-                productStockRepository.save(new ProductStockEntity(productId, ONE_SIZE_TOKEN, 0, null));
+                productStockRepository.save(new ProductStockEntity(productId, ProductConstants.ONE_SIZE_TOKEN, 0, null));
             }
         }
 
@@ -168,9 +178,9 @@ public class ProductService {
     @Transactional
     public ProductDetailDto archive(Long productId, int loadedVersion, Long actorId) {
         ProductEntity product = productRepository.findById(productId)
-                .orElseThrow(() -> new NotFoundException("product.notFound", productId));
+                .orElseThrow(() -> new NotFoundException(ErrorConstants.Product.NOT_FOUND, productId));
         if (product.isArchived() || product.getVersion() != loadedVersion) {
-            throw new ConflictException("product.versionMismatch");
+            throw new ConflictException(ErrorConstants.Product.VERSION_MISMATCH);
         }
 
         OffsetDateTime now = OffsetDateTime.now();
@@ -187,9 +197,9 @@ public class ProductService {
     @Transactional
     public ProductDetailDto restore(Long productId, int loadedVersion, Long actorId) {
         ProductEntity product = productRepository.findById(productId)
-                .orElseThrow(() -> new NotFoundException("product.notFound", productId));
+                .orElseThrow(() -> new NotFoundException(ErrorConstants.Product.NOT_FOUND, productId));
         if (!product.isArchived() || product.getVersion() != loadedVersion) {
-            throw new ConflictException("product.versionMismatch");
+            throw new ConflictException(ErrorConstants.Product.VERSION_MISMATCH);
         }
 
         OffsetDateTime now = OffsetDateTime.now();
@@ -207,14 +217,14 @@ public class ProductService {
         try {
             productRepository.saveAndFlush(product);
         } catch (OptimisticLockingFailureException ex) {
-            throw new ConflictException("product.versionMismatch");
+            throw new ConflictException(ErrorConstants.Product.VERSION_MISMATCH);
         }
     }
 
     @Transactional(readOnly = true)
     public ProductDetailDto getById(Long id) {
         ProductEntity productEntity = productRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("product.notFound", id));
+                .orElseThrow(() -> new NotFoundException(ErrorConstants.Product.NOT_FOUND, id));
         return buildDetailDto(productEntity);
     }
 
@@ -235,62 +245,33 @@ public class ProductService {
 
     private static void validateStockBySize(boolean isMultiSize, Map<String, ProductStockInputDto> stockBySize) {
         if (stockBySize == null || stockBySize.isEmpty()) {
-            throw new BadRequestException("product.stock.entryRequired");
+            throw new BadRequestException(ErrorConstants.Product.STOCK_ENTRY_REQUIRED);
         }
         stockBySize.forEach((sizeToken, stock) -> {
             if (sizeToken == null || sizeToken.isBlank() || sizeToken.length() > SIZE_TOKEN_MAX_LENGTH) {
-                throw new BadRequestException("product.stock.sizeTokenInvalid", SIZE_TOKEN_MAX_LENGTH);
+                throw new BadRequestException(ErrorConstants.Product.STOCK_SIZE_TOKEN_INVALID, SIZE_TOKEN_MAX_LENGTH);
             }
             if (stock == null) {
-                throw new BadRequestException("product.stock.entryMissing", sizeToken);
+                throw new BadRequestException(ErrorConstants.Product.STOCK_ENTRY_MISSING, sizeToken);
             }
             if (stock.getQuantity() < 0) {
-                throw new BadRequestException("product.stock.qtyNonNegative", sizeToken);
+                throw new BadRequestException(ErrorConstants.Product.STOCK_QTY_NON_NEGATIVE, sizeToken);
             }
             if (stock.getLowStockThreshold() != null && stock.getLowStockThreshold() < 0) {
-                throw new BadRequestException("product.stock.thresholdNonNegative", sizeToken);
+                throw new BadRequestException(ErrorConstants.Product.STOCK_THRESHOLD_NON_NEGATIVE, sizeToken);
             }
         });
         if (isMultiSize) {
-            if (stockBySize.containsKey(ONE_SIZE_TOKEN)) {
-                throw new BadRequestException("product.stock.multiSizeCannotBeOne", ONE_SIZE_TOKEN);
+            if (stockBySize.containsKey(ProductConstants.ONE_SIZE_TOKEN)) {
+                throw new BadRequestException(ErrorConstants.Product.STOCK_MULTI_SIZE_CANNOT_BE_ONE, ProductConstants.ONE_SIZE_TOKEN);
             }
-        } else if (stockBySize.size() != 1 || !stockBySize.containsKey(ONE_SIZE_TOKEN)) {
-            throw new BadRequestException("product.stock.singleSizeMustBeOne", ONE_SIZE_TOKEN);
+        } else if (stockBySize.size() != 1 || !stockBySize.containsKey(ProductConstants.ONE_SIZE_TOKEN)) {
+            throw new BadRequestException(ErrorConstants.Product.STOCK_SINGLE_SIZE_MUST_BE_ONE, ProductConstants.ONE_SIZE_TOKEN);
         }
     }
 
     private String parseProductImageFilenameOrThrow(String imageUrl) {
-        try {
-            return imagesProperties.parseFilename(ResourceImagePolicy.PRODUCTS, imageUrl);
-        } catch (IllegalArgumentException e) {
-            throw new BadRequestException("product.invalidImageUrl");
-        }
-    }
-
-    private Sort buildSort(String sortField, String sortDirection) {
-        Sort.Order idTieBreak = Sort.Order.asc(SORT_FIELD_ID);
-        if (sortField == null || sortField.isBlank()) {
-            return Sort.by(idTieBreak);
-        }
-        Sort.Direction direction = SORT_DIRECTION_DESC.equalsIgnoreCase(sortDirection)
-                ? Sort.Direction.DESC
-                : Sort.Direction.ASC;
-        String primaryField = resolvePrimarySortField(sortField);
-        if (primaryField == null) {
-            return Sort.by(idTieBreak);
-        }
-        if (SORT_FIELD_ID.equalsIgnoreCase(primaryField)) {
-            return Sort.by(new Sort.Order(direction, SORT_FIELD_ID));
-        }
-        return Sort.by(new Sort.Order(direction, primaryField), idTieBreak);
-    }
-
-    private String resolvePrimarySortField(String sortField) {
-        if (SORT_FIELD_PRICE.equalsIgnoreCase(sortField)) return SORT_FIELD_PRICE;
-        if (SORT_FIELD_NAME.equalsIgnoreCase(sortField)) return SORT_FIELD_NAME;
-        if (SORT_FIELD_CATEGORY.equalsIgnoreCase(sortField)) return SORT_PATH_CATEGORY_NAME;
-        if (SORT_FIELD_UPDATED_AT.equalsIgnoreCase(sortField)) return SORT_FIELD_UPDATED_AT;
-        return null;
+        return imagesProperties.parseFilenameOrBadRequest(
+                ResourceImagePolicy.PRODUCTS, imageUrl, ErrorConstants.Product.INVALID_IMAGE_URL);
     }
 }

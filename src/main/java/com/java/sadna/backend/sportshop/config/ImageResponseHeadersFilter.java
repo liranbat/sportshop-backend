@@ -24,10 +24,10 @@ public class ImageResponseHeadersFilter extends OncePerRequestFilter {
 
     private static final String CATEGORY_SVG_CSP = "default-src 'none'; style-src 'unsafe-inline'";
 
-    private final AppProperties appProperties;
+    private final ImagesProperties images;
 
-    public ImageResponseHeadersFilter(AppProperties appProperties) {
-        this.appProperties = appProperties;
+    public ImageResponseHeadersFilter(ImagesProperties images) {
+        this.images = images;
     }
 
     @Override
@@ -35,8 +35,6 @@ public class ImageResponseHeadersFilter extends OncePerRequestFilter {
                                     HttpServletResponse response,
                                     FilterChain filterChain)
             throws ServletException, IOException {
-        ImagesProperties images = appProperties.getImages();
-
         response.setHeader(HttpHeaders.CACHE_CONTROL, "public, max-age=" + images.getCacheTtlSeconds());
         response.setHeader(HttpHeaders.CONTENT_DISPOSITION, "inline");
 

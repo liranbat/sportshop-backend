@@ -8,14 +8,16 @@ import com.java.sadna.backend.sportshop.api.generated.products.model.ProductDeta
 import com.java.sadna.backend.sportshop.api.generated.products.model.ProductLifecycleRequest;
 import com.java.sadna.backend.sportshop.api.generated.products.model.ProductPage;
 import com.java.sadna.backend.sportshop.api.generated.products.model.ProductUpdateRequest;
+import com.java.sadna.backend.sportshop.common.constants.ErrorConstants;
 import com.java.sadna.backend.sportshop.exception.NotFoundException;
-import com.java.sadna.backend.sportshop.mapper.PagedProductDtoToProductPageMapper;
-import com.java.sadna.backend.sportshop.mapper.ProductCreateRequestToProductCreateRequestDtoMapper;
-import com.java.sadna.backend.sportshop.mapper.ProductDetailDtoToProductDetailMapper;
-import com.java.sadna.backend.sportshop.mapper.ProductUpdateRequestToProductUpdateRequestDtoMapper;
+import com.java.sadna.backend.sportshop.mapper.dto.response.PagedProductDtoToProductPageMapper;
+import com.java.sadna.backend.sportshop.mapper.request.dto.ProductCreateRequestToProductCreateRequestDtoMapper;
+import com.java.sadna.backend.sportshop.mapper.request.dto.ProductUpdateRequestToProductUpdateRequestDtoMapper;
+import com.java.sadna.backend.sportshop.mapper.dto.response.ProductDetailDtoToProductDetailMapper;
 import com.java.sadna.backend.sportshop.model.PagedResult;
 import com.java.sadna.backend.sportshop.model.ProductDetailDto;
 import com.java.sadna.backend.sportshop.model.ProductDto;
+import com.java.sadna.backend.sportshop.common.constants.AuthorityConstants;
 import com.java.sadna.backend.sportshop.security.SecurityContextUtils;
 import com.java.sadna.backend.sportshop.service.ProductService;
 import org.springframework.http.ResponseEntity;
@@ -66,13 +68,13 @@ public class ProductController implements ProductsApi, AdminProductsApi {
     public ResponseEntity<ProductDetail> getProduct(Long id) {
         ProductDetailDto detail = productService.getById(id);
         if (detail.getProduct().isArchived() && !SecurityContextUtils.currentUserIsAdmin()) {
-            throw new NotFoundException("product.notFound", id);
+            throw new NotFoundException(ErrorConstants.Product.NOT_FOUND, id);
         }
         return ResponseEntity.ok(productDetailDtoToProductDetailMapper.map(detail));
     }
 
     @Override
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize(AuthorityConstants.ADMIN)
     public ResponseEntity<ProductPage> listAdminProducts(ProductArchiveStatusFilter archiveStatus,
                                                          Boolean isMultiSize,
                                                          String search,
@@ -92,7 +94,7 @@ public class ProductController implements ProductsApi, AdminProductsApi {
     }
 
     @Override
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize(AuthorityConstants.ADMIN)
     public ResponseEntity<ProductDetail> createAdminProduct(ProductCreateRequest req) {
         ProductDetailDto detail = productService.create(
                 productCreateRequestToProductCreateRequestDtoMapper.map(req)
@@ -101,7 +103,7 @@ public class ProductController implements ProductsApi, AdminProductsApi {
     }
 
     @Override
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize(AuthorityConstants.ADMIN)
     public ResponseEntity<ProductDetail> updateAdminProduct(Long id, ProductUpdateRequest req) {
         ProductDetailDto detail = productService.update(
                 id,
@@ -112,7 +114,7 @@ public class ProductController implements ProductsApi, AdminProductsApi {
     }
 
     @Override
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize(AuthorityConstants.ADMIN)
     public ResponseEntity<ProductDetail> archiveAdminProduct(Long id, ProductLifecycleRequest req) {
         ProductDetailDto detail = productService.archive(
                 id, req.getVersion(), SecurityContextUtils.currentUserIdOrThrow()
@@ -121,7 +123,7 @@ public class ProductController implements ProductsApi, AdminProductsApi {
     }
 
     @Override
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize(AuthorityConstants.ADMIN)
     public ResponseEntity<ProductDetail> restoreAdminProduct(Long id, ProductLifecycleRequest req) {
         ProductDetailDto detail = productService.restore(
                 id, req.getVersion(), SecurityContextUtils.currentUserIdOrThrow()

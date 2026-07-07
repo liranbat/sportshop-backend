@@ -70,7 +70,7 @@ public interface OrderRepository extends JpaRepository<OrderEntity, Long>,
     @Modifying(clearAutomatically = true)
     @Query(value = """
             UPDATE orders
-               SET status       = CASE WHEN :isAdmin THEN 'CANCELLED_BY_ADMIN' ELSE 'CANCELLED_BY_USER' END,
+               SET status       = :cancelStatus,
                    cancelled_at = NOW(),
                    cancelled_by = :actorId,
                    updated_at   = NOW(),
@@ -83,7 +83,8 @@ public interface OrderRepository extends JpaRepository<OrderEntity, Long>,
             """, nativeQuery = true)
     int cancel(@Param("id") Long id,
                @Param("isAdmin") boolean isAdmin,
-               @Param("actorId") Long actorId);
+               @Param("actorId") Long actorId,
+               @Param("cancelStatus") String cancelStatus);
 
     @Modifying(clearAutomatically = true)
     @Query(value = """

@@ -11,11 +11,16 @@ spring:
     always-use-message-format: true
     use-code-as-default-message: true
 
+  # Pin the Spring Boot default: java.time -> ISO-8601.
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+
   servlet:
     multipart:
       enabled: true
-      max-file-size: 12MB
-      max-request-size: 12MB
+      max-file-size: ${app.images.max-upload-bytes:12MB}
+      max-request-size: ${app.images.max-upload-bytes:12MB}
 
   datasource:
     url: jdbc:postgresql://${SPORTSHOP_DB_HOST:localhost}:${SPORTSHOP_DB_PORT:5432}/${SPORTSHOP_DB_NAME:sportshop}?currentSchema=${SPORTSHOP_DB_SCHEMA:sportshop}
@@ -37,6 +42,14 @@ spring:
     locations: classpath:db/migration
     baseline-on-migrate: false
 
+server:
+  port: ${SPORTSHOP_SERVER_PORT:8080}
+
+logging:
+  level:
+    root: INFO
+    com.java.sadna.backend.sportshop: ${SPORTSHOP_LOG_LEVEL_APP:INFO}
+
 management:
   tracing:
     sampling:
@@ -51,14 +64,47 @@ app:
     path-prefix: /api
   cors:
     allowed-origins: ${SPORTSHOP_CORS_ALLOWED_ORIGINS:http://localhost:5173}
+    allowed-methods:
+      - GET
+      - POST
+      - PUT
+      - PATCH
+      - DELETE
+      - OPTIONS
+    allowed-headers:
+      - "*"
+    exposed-headers:
+      - X-Trace-Id
+      - X-Auth-Role
   images:
     url-prefix: images
     category-prefix: categories
     product-prefix: products
     local-dir: ${SPORTSHOP_IMAGES_LOCAL_DIR:../../images}
     cache-ttl-seconds: ${SPORTSHOP_IMAGES_CACHE_TTL_SECONDS:604800}
+    max-upload-bytes: ${SPORTSHOP_IMAGES_MAX_UPLOAD_BYTES:12MB}
+    uuid-retries: ${SPORTSHOP_IMAGES_UUID_RETRIES:5}
   auth:
     secret: ${SPORTSHOP_JWT_SECRET}
     access-token-ttl: ${SPORTSHOP_ACCESS_TOKEN_TTL:PT15M}
     refresh-token-ttl: ${SPORTSHOP_REFRESH_TOKEN_TTL:P14D}
     cookie-secure: ${SPORTSHOP_AUTH_COOKIE_SECURE:false}
+    refresh-token-bytes: ${SPORTSHOP_AUTH_REFRESH_TOKEN_BYTES:32}
+    min-secret-bytes: ${SPORTSHOP_AUTH_MIN_SECRET_BYTES:32}
+    cookie:
+      access-name: sportshop_access_token
+      refresh-name: sportshop_refresh_token
+  pagination:
+    default-page-size:
+      orders: 10
+      products: 9
+      users: 20
+      sessions: 20
+      stock: 50
+  checkout:
+    order-number-retries: ${SPORTSHOP_CHECKOUT_ORDER_NUMBER_RETRIES:5}
+  payment:
+    provider: MOCK_CARD
+    currency: USD
+    mock:
+      decline-suffix: "0000"

@@ -1,7 +1,11 @@
 package com.java.sadna.backend.sportshop.service;
 
-import com.java.sadna.backend.sportshop.config.AppProperties;
+import com.java.sadna.backend.sportshop.common.constants.ErrorConstants;
+import com.java.sadna.backend.sportshop.common.util.OrderStatusTransitions;
+import com.java.sadna.backend.sportshop.common.util.PaymentStatuses;
+import com.java.sadna.backend.sportshop.config.CheckoutProperties;
 import com.java.sadna.backend.sportshop.config.ImagesProperties;
+import com.java.sadna.backend.sportshop.config.PaymentProperties;
 import com.java.sadna.backend.sportshop.entity.OrderItemEntity;
 import com.java.sadna.backend.sportshop.entity.PaymentEntity;
 import com.java.sadna.backend.sportshop.exception.ConflictException;
@@ -16,8 +20,7 @@ import com.java.sadna.backend.sportshop.repository.OrderItemRepository;
 import com.java.sadna.backend.sportshop.repository.OrderRepository;
 import com.java.sadna.backend.sportshop.repository.PaymentRepository;
 import com.java.sadna.backend.sportshop.repository.ProductStockRepository;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,16 +30,8 @@ import java.util.Comparator;
 import java.util.List;
 
 @Service
+@Slf4j
 public class CheckoutService {
-
-    private static final Logger log = LoggerFactory.getLogger(CheckoutService.class);
-
-    private static final String ORDER_STATUS_PAID = "PAID";
-    private static final String PAYMENT_STATUS_SUCCESS = "SUCCESS";
-    private static final String PAYMENT_PROVIDER_MOCK_CARD = "MOCK_CARD";
-    private static final String CURRENCY_USD = "USD";
-
-    private static final int ORDER_NUMBER_RETRY_CAP = 5;
 
     private final CartService cartService;
     private final CartItemRepository cartItemRepository;
@@ -47,6 +42,9 @@ public class CheckoutService {
     private final OrderNumberGenerator orderNumberGenerator;
     private final MockPaymentProcessor mockPaymentProcessor;
     private final ImagesProperties imagesProperties;
+    private final String paymentProvider;
+    private final String paymentCurrency;
+    private final int orderNumberRetryCap;
 
     public CheckoutService(CartService cartService,
                            CartItemRepository cartItemRepository,
@@ -56,7 +54,9 @@ public class CheckoutService {
                            PaymentRepository paymentRepository,
                            OrderNumberGenerator orderNumberGenerator,
                            MockPaymentProcessor mockPaymentProcessor,
-                           AppProperties appProperties) {
+                           ImagesProperties imagesProperties,
+                           CheckoutProperties checkoutProperties,
+                           PaymentProperties paymentProperties) {
         this.cartService = cartService;
         this.cartItemRepository = cartItemRepository;
         this.productStockRepository = productStockRepository;
@@ -65,7 +65,10 @@ public class CheckoutService {
         this.paymentRepository = paymentRepository;
         this.orderNumberGenerator = orderNumberGenerator;
         this.mockPaymentProcessor = mockPaymentProcessor;
-        this.imagesProperties = appProperties.getImages();
+        this.imagesProperties = imagesProperties;
+        this.paymentProvider = paymentProperties.getProvider();
+        this.paymentCurrency = paymentProperties.getCurrency();
+        this.orderNumberRetryCap = checkoutProperties.getOrderNumberRetries();
     }
 
     @Transactional
@@ -81,8 +84,8 @@ public class CheckoutService {
         if (!validation.isOk()) {
             boolean versionDrift = !validation.getVersionMismatches().isEmpty();
             String key = versionDrift
-                    ? "checkout.versionMismatch"
-                    : "checkout.insufficientStock.preflight";
+                    ? ErrorConstants.Checkout.VERSION_MISMATCH
+                    : ErrorConstants.Checkout.INSUFFICIENT_STOCK_PREFLIGHT;
             log.warn("Checkout pre-flight failed: versionDrift={}", versionDrift);
             throw new ConflictException(key);
         }
@@ -107,7 +110,7 @@ public class CheckoutService {
             if (affected == 0) {
                 log.warn("Stock race: productId={} size={} requestedQty={} expectedVersion={}",
                         row.getProductId(), row.getSize(), requestedQty, expectedVersion);
-                throw new ConflictException("checkout.insufficientStock.race");
+                throw new ConflictException(ErrorConstants.Checkout.INSUFFICIENT_STOCK_RACE);
             }
         }
 
@@ -119,12 +122,12 @@ public class CheckoutService {
         ShippingDetailsDto shipping = request.getShipping();
         String orderNumber = null;
         Long orderId = null;
-        for (int attempt = 1; attempt <= ORDER_NUMBER_RETRY_CAP; attempt++) {
+        for (int attempt = 1; attempt <= orderNumberRetryCap; attempt++) {
             orderNumber = orderNumberGenerator.generate();
             log.debug("Order number attempt: attempt={} number={}", attempt, orderNumber);
             int inserted = orderRepository.insertIfUniqueNumber(
                     userId,
-                    ORDER_STATUS_PAID,
+                    OrderStatusTransitions.PAID,
                     totalPrice,
                     orderNumber,
                     shipping.getFullName(),
@@ -140,8 +143,8 @@ public class CheckoutService {
             log.warn("Order number collision: attempt={} number={}", attempt, orderNumber);
         }
         if (orderId == null) {
-            log.error("Order number exhausted: attempts={}", ORDER_NUMBER_RETRY_CAP);
-            throw new InternalServerErrorException("checkout.orderNumberExhausted");
+            log.error("Order number exhausted: attempts={}", orderNumberRetryCap);
+            throw new InternalServerErrorException(ErrorConstants.Checkout.ORDER_NUMBER_EXHAUSTED);
         }
         log.info("Order persisted: orderId={} orderNumber={} total={} itemCount={}",
                 orderId, orderNumber, totalPrice, itemCount);
@@ -170,10 +173,10 @@ public class CheckoutService {
 
         paymentRepository.save(new PaymentEntity(
                 orderId,
-                PAYMENT_STATUS_SUCCESS,
+                PaymentStatuses.SUCCESS,
                 totalPrice,
-                CURRENCY_USD,
-                PAYMENT_PROVIDER_MOCK_CARD,
+                paymentCurrency,
+                paymentProvider,
                 transactionId
         ));
         log.debug("Payment persisted: orderId={}", orderId);

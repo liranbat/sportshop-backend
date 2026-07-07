@@ -1,11 +1,11 @@
 package com.java.sadna.backend.sportshop.repository.specification;
 
+import com.java.sadna.backend.sportshop.common.constants.OrderConstants;
+import com.java.sadna.backend.sportshop.common.util.SpecsUtil;
 import com.java.sadna.backend.sportshop.entity.OrderEntity;
 import com.java.sadna.backend.sportshop.entity.UserEntity;
-import jakarta.persistence.criteria.Expression;
 import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.JoinType;
-import jakarta.persistence.criteria.Path;
 import org.springframework.data.jpa.domain.Specification;
 
 import java.math.BigDecimal;
@@ -17,61 +17,43 @@ public final class OrderSpecifications {
     }
 
     public static Specification<OrderEntity> userIdEquals(Long userId) {
-        if (userId == null) return null;
-        return (root, query, cb) -> cb.equal(root.get("userId"), userId);
+        return SpecsUtil.equal(OrderConstants.USER_ID, userId);
     }
 
     public static Specification<OrderEntity> statusEquals(String status) {
-        if (status == null) return null;
-        return (root, query, cb) -> cb.equal(root.get("status"), status);
+        return SpecsUtil.equal(OrderConstants.STATUS, status);
     }
 
     public static Specification<OrderEntity> orderNumberContainsIgnoreCase(String search) {
-        if (search == null) return null;
-        String trimmed = search.trim();
-        if (trimmed.isEmpty()) return null;
-        String pattern = "%" + trimmed.toLowerCase() + "%";
-        return (root, query, cb) -> cb.like(cb.lower(root.get("orderNumber")), pattern);
+        return SpecsUtil.likeContainsIgnoreCase(OrderConstants.ORDER_NUMBER, search);
     }
 
     public static Specification<OrderEntity> totalPriceGte(BigDecimal min) {
         if (min == null) return null;
-        return (root, query, cb) -> cb.greaterThanOrEqualTo(root.get("totalPrice"), min);
+        return (root, query, cb) -> cb.greaterThanOrEqualTo(root.get(OrderConstants.TOTAL_PRICE), min);
     }
 
     public static Specification<OrderEntity> totalPriceLte(BigDecimal max) {
         if (max == null) return null;
-        return (root, query, cb) -> cb.lessThanOrEqualTo(root.get("totalPrice"), max);
+        return (root, query, cb) -> cb.lessThanOrEqualTo(root.get(OrderConstants.TOTAL_PRICE), max);
     }
 
     public static Specification<OrderEntity> createdAtGte(OffsetDateTime fromInclusive) {
         if (fromInclusive == null) return null;
-        return (root, query, cb) -> cb.greaterThanOrEqualTo(root.get("createdAt"), fromInclusive);
+        return (root, query, cb) -> cb.greaterThanOrEqualTo(root.get(OrderConstants.CREATED_AT), fromInclusive);
     }
 
     public static Specification<OrderEntity> createdAtLt(OffsetDateTime toExclusive) {
         if (toExclusive == null) return null;
-        return (root, query, cb) -> cb.lessThan(root.get("createdAt"), toExclusive);
+        return (root, query, cb) -> cb.lessThan(root.get(OrderConstants.CREATED_AT), toExclusive);
     }
 
     public static Specification<OrderEntity> customerMatches(String customer) {
-        if (customer == null) return null;
-        String trimmed = customer.trim();
-        if (trimmed.isEmpty()) return null;
-        String pattern = "%" + trimmed.toLowerCase() + "%";
+        String pattern = SpecsUtil.toContainsPattern(customer);
+        if (pattern == null) return null;
         return (root, query, cb) -> {
-            Join<OrderEntity, UserEntity> user = root.join("user", JoinType.INNER);
-            Path<String> firstName = user.get("firstName");
-            Path<String> lastName = user.get("lastName");
-            Expression<String> firstSpaceLast = cb.lower(cb.concat(cb.concat(firstName, " "), lastName));
-            Expression<String> lastSpaceFirst = cb.lower(cb.concat(cb.concat(lastName, " "), firstName));
-            return cb.or(
-                    cb.like(cb.lower(firstName), pattern),
-                    cb.like(cb.lower(lastName), pattern),
-                    cb.like(cb.lower(user.get("email")), pattern),
-                    cb.like(firstSpaceLast, pattern),
-                    cb.like(lastSpaceFirst, pattern)
-            );
+            Join<OrderEntity, UserEntity> user = root.join(OrderConstants.USER, JoinType.INNER);
+            return SpecsUtil.fullNameOrEmailLike(cb, user, pattern);
         };
     }
 }

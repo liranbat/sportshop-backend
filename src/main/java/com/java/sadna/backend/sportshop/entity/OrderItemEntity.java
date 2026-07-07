@@ -6,11 +6,16 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 
 @Entity
 @Table(name = "order_items")
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class OrderItemEntity {
 
     @Id
@@ -41,9 +46,6 @@ public class OrderItemEntity {
     @Column(name = "size", nullable = false, length = 20)
     private String size;
 
-    protected OrderItemEntity() {
-    }
-
     public OrderItemEntity(Long orderId,
                            Long productId,
                            int productVersion,
@@ -60,41 +62,5 @@ public class OrderItemEntity {
         this.productName = productName;
         this.productImageUrl = productImageUrl;
         this.size = size;
-    }
-
-    public Long getId() {
-        return id;
-    }
-
-    public Long getOrderId() {
-        return orderId;
-    }
-
-    public Long getProductId() {
-        return productId;
-    }
-
-    public int getProductVersion() {
-        return productVersion;
-    }
-
-    public int getQuantity() {
-        return quantity;
-    }
-
-    public BigDecimal getPricePerUnit() {
-        return pricePerUnit;
-    }
-
-    public String getProductName() {
-        return productName;
-    }
-
-    public String getProductImageUrl() {
-        return productImageUrl;
-    }
-
-    public String getSize() {
-        return size;
     }
 }

@@ -22,6 +22,8 @@
 		<spring-dotenv.version>5.1.0</spring-dotenv.version>
 		<jjwt.version>0.12.6</jjwt.version>
 		<tika.version>3.2.3</tika.version>
+		<mapstruct.version>1.6.3</mapstruct.version>
+		<lombok-mapstruct-binding.version>0.2.0</lombok-mapstruct-binding.version>
 		<sportshop-swagger.version>main.1.0.4</sportshop-swagger.version>
 		<openapi.specs.staged>${project.build.directory}/openapi</openapi.specs.staged>
 	</properties>
@@ -117,6 +119,19 @@
 			<optional>true</optional>
 		</dependency>
 
+		<!-- Compile-time only annotation processor; not shipped in the runtime jar. -->
+		<dependency>
+			<groupId>org.projectlombok</groupId>
+			<artifactId>lombok</artifactId>
+			<scope>provided</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>org.mapstruct</groupId>
+			<artifactId>mapstruct</artifactId>
+			<version>${mapstruct.version}</version>
+		</dependency>
+
 		<!-- Auto-restart on classpath changes during local dev. `optional=true`
 		     keeps it out of downstream consumers and the repackaged fat jar. -->
 		<dependency>
@@ -131,6 +146,37 @@
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
+			</plugin>
+
+			<!-- Explicit annotation processor paths so ordering stays deterministic.
+			     Order matters: lombok must run before lombok-mapstruct-binding, which
+			     must run before mapstruct-processor. -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<configuration>
+					<annotationProcessorPaths>
+						<path>
+							<groupId>org.projectlombok</groupId>
+							<artifactId>lombok</artifactId>
+							<version>${lombok.version}</version>
+						</path>
+						<path>
+							<groupId>org.projectlombok</groupId>
+							<artifactId>lombok-mapstruct-binding</artifactId>
+							<version>${lombok-mapstruct-binding.version}</version>
+						</path>
+						<path>
+							<groupId>org.mapstruct</groupId>
+							<artifactId>mapstruct-processor</artifactId>
+							<version>${mapstruct.version}</version>
+						</path>
+						<path>
+							<groupId>org.springframework.boot</groupId>
+							<artifactId>spring-boot-configuration-processor</artifactId>
+						</path>
+					</annotationProcessorPaths>
+				</configuration>
 			</plugin>
 
 			<plugin>

@@ -2,11 +2,17 @@ package com.java.sadna.backend.sportshop.service;
 
 import com.java.sadna.backend.sportshop.api.generated.authusers.model.ChangePasswordRequest;
 import com.java.sadna.backend.sportshop.api.generated.authusers.model.UpdateProfileRequest;
+import com.java.sadna.backend.sportshop.common.constants.ErrorConstants;
+import com.java.sadna.backend.sportshop.common.constants.PageSizeConstants;
+import com.java.sadna.backend.sportshop.common.constants.UserConstants;
+import com.java.sadna.backend.sportshop.common.util.SortDirections;
+import com.java.sadna.backend.sportshop.common.util.SortResolver;
+import com.java.sadna.backend.sportshop.config.PaginationProperties;
 import com.java.sadna.backend.sportshop.entity.UserEntity;
 import com.java.sadna.backend.sportshop.exception.ConflictException;
 import com.java.sadna.backend.sportshop.exception.NotFoundException;
 import com.java.sadna.backend.sportshop.exception.UnauthorizedException;
-import com.java.sadna.backend.sportshop.mapper.UserEntityToUserDtoMapper;
+import com.java.sadna.backend.sportshop.mapper.entity.dto.UserEntityToUserDtoMapper;
 import com.java.sadna.backend.sportshop.model.PagedResult;
 import com.java.sadna.backend.sportshop.model.UserDto;
 import com.java.sadna.backend.sportshop.repository.CartItemRepository;
@@ -16,26 +22,26 @@ import com.java.sadna.backend.sportshop.repository.specification.UserSpecificati
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
-import org.springframework.http.HttpHeaders;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
+import java.util.List;
+import java.util.Map;
 
 @Service
 public class UserService {
 
-    private static final String SORT_FIELD_NAME = "name";
-    private static final String SORT_FIELD_EMAIL = "email";
-    private static final String SORT_PATH_ID = "id";
-    private static final String SORT_PATH_FIRST_NAME = "firstName";
-    private static final String SORT_PATH_LAST_NAME = "lastName";
-    private static final String SORT_PATH_EMAIL = "email";
-    private static final String SORT_DIRECTION_ASC = "asc";
-    private static final String SORT_DIRECTION_DESC = "desc";
-
-    private static final int DEFAULT_PAGE_SIZE = 20;
+    private static final SortResolver SORT_RESOLVER = new SortResolver(
+            Map.of(
+                    UserConstants.Sort.NAME, List.of(UserConstants.FIRST_NAME, UserConstants.LAST_NAME),
+                    UserConstants.Sort.EMAIL, List.of(UserConstants.EMAIL),
+                    UserConstants.Sort.ID, List.of(UserConstants.ID)
+            ),
+            SortResolver.orders(UserConstants.ID, SortDirections.DESC),
+            SortResolver.orders(UserConstants.ID, SortDirections.ASC)
+    );
 
     private final UserRepository userRepository;
     private final RefreshTokenRepository refreshTokenRepository;
@@ -44,6 +50,7 @@ public class UserService {
     private final CookieService cookieService;
     private final PaginationService paginationService;
     private final UserEntityToUserDtoMapper userEntityToUserDtoMapper;
+    private final int defaultPageSize;
 
     public UserService(UserRepository userRepository,
                        RefreshTokenRepository refreshTokenRepository,
@@ -51,7 +58,8 @@ public class UserService {
                        PasswordEncoder passwordEncoder,
                        CookieService cookieService,
                        PaginationService paginationService,
-                       UserEntityToUserDtoMapper userEntityToUserDtoMapper) {
+                       UserEntityToUserDtoMapper userEntityToUserDtoMapper,
+                       PaginationProperties paginationProperties) {
         this.userRepository = userRepository;
         this.refreshTokenRepository = refreshTokenRepository;
         this.cartItemRepository = cartItemRepository;
@@ -59,6 +67,8 @@ public class UserService {
         this.cookieService = cookieService;
         this.paginationService = paginationService;
         this.userEntityToUserDtoMapper = userEntityToUserDtoMapper;
+        this.defaultPageSize = paginationProperties.getDefaultPageSize()
+                .getOrDefault(PageSizeConstants.USERS_KEY, PageSizeConstants.USERS_DEFAULT);
     }
 
     @Transactional
@@ -75,9 +85,9 @@ public class UserService {
 
         if (updated == 0) {
             if (actorIsAdmin) {
-                throw new NotFoundException("user.notFound");
+                throw new NotFoundException(ErrorConstants.User.NOT_FOUND);
             }
-            throw new UnauthorizedException("user.notActive");
+            throw new UnauthorizedException(ErrorConstants.User.NOT_ACTIVE);
         }
 
         UserEntity fresh = actorIsAdmin
@@ -90,7 +100,7 @@ public class UserService {
     public void changePassword(Long userId, ChangePasswordRequest dto) {
         UserEntity entity = loadActiveOrThrow(userId);
         if (!passwordEncoder.matches(dto.getCurrentPassword(), entity.getPasswordHash())) {
-            throw new UnauthorizedException("user.currentPasswordIncorrect");
+            throw new UnauthorizedException(ErrorConstants.User.CURRENT_PASSWORD_INCORRECT);
         }
 
         int updated = userRepository.rotatePassword(
@@ -102,7 +112,7 @@ public class UserService {
         );
 
         if (updated == 0) {
-            throw new ConflictException("user.concurrentModification");
+            throw new ConflictException(ErrorConstants.User.CONCURRENT_MODIFICATION);
         }
     }
 
@@ -110,10 +120,10 @@ public class UserService {
     public void deleteAccount(Long userId, String currentPassword, HttpServletResponse response) {
         UserEntity entity = loadActiveOrThrow(userId);
         if (!passwordEncoder.matches(currentPassword, entity.getPasswordHash())) {
-            throw new UnauthorizedException("user.currentPasswordIncorrect");
+            throw new UnauthorizedException(ErrorConstants.User.CURRENT_PASSWORD_INCORRECT);
         }
         if (entity.isAdmin() && userRepository.countByAdminTrueAndDeletedFalse() <= 1) {
-            throw new ConflictException("user.deleteConflict");
+            throw new ConflictException(ErrorConstants.User.DELETE_CONFLICT);
         }
 
         int deleted = userRepository.softDelete(
@@ -123,12 +133,12 @@ public class UserService {
         );
 
         if (deleted == 0) {
-            throw new ConflictException("user.deleteConflict");
+            throw new ConflictException(ErrorConstants.User.DELETE_CONFLICT);
         }
         // Order matters: drop refresh tokens first so any in-flight refresh on this
         // user 401s immediately; the row stays soft-deleted but the session is gone.
         refreshTokenRepository.deleteByUserId(userId);
-        attachClearedCookies(response);
+        cookieService.clearAuthCookies(response);
     }
 
     // Post-deletion cleanup. Caller fires this off the request thread; only call after
@@ -147,7 +157,7 @@ public class UserService {
     public UserDto promoteToAdmin(Long targetUserId, Long actorUserId) {
         int updated = userRepository.applyPromote(targetUserId, actorUserId, OffsetDateTime.now());
         if (updated == 0) {
-            throw new ConflictException("user.promoteConflict");
+            throw new ConflictException(ErrorConstants.User.PROMOTE_CONFLICT);
         }
         return userEntityToUserDtoMapper.map(loadByIdOrThrow(targetUserId));
     }
@@ -156,7 +166,7 @@ public class UserService {
     public UserDto demoteFromAdmin(Long targetUserId, Long actorUserId) {
         int updated = userRepository.applyDemote(targetUserId, actorUserId, OffsetDateTime.now());
         if (updated == 0) {
-            throw new ConflictException("user.demoteConflict");
+            throw new ConflictException(ErrorConstants.User.DEMOTE_CONFLICT);
         }
         return userEntityToUserDtoMapper.map(loadByIdOrThrow(targetUserId));
     }
@@ -166,14 +176,14 @@ public class UserService {
         UserEntity entity = loadByIdOrThrow(targetUserId);
         if (entity.isAdmin() && !entity.isDeleted()
                 && userRepository.countByAdminTrueAndDeletedFalse() <= 1) {
-            throw new ConflictException("user.admin.lastAdminDelete");
+            throw new ConflictException(ErrorConstants.User.ADMIN_LAST_ADMIN_DELETE);
         }
 
         int updated = userRepository.applyAdminSoftDelete(
                 targetUserId, actorUserId, OffsetDateTime.now()
         );
         if (updated == 0) {
-            throw new ConflictException("user.admin.softDeleteConflict");
+            throw new ConflictException(ErrorConstants.User.ADMIN_SOFT_DELETE_CONFLICT);
         }
         // refresh tokens dropped in-txn so the target's in-flight refreshes 401
         // immediately; cart cleanup is fire-and-forget at the controller (cleanupDeletedUser)
@@ -187,7 +197,7 @@ public class UserService {
                 targetUserId, actorUserId, OffsetDateTime.now()
         );
         if (updated == 0) {
-            throw new ConflictException("user.admin.restoreConflict");
+            throw new ConflictException(ErrorConstants.User.ADMIN_RESTORE_CONFLICT);
         }
         return userEntityToUserDtoMapper.map(loadByIdOrThrow(targetUserId));
     }
@@ -206,55 +216,21 @@ public class UserService {
                 UserSpecifications.searchMatches(q)
         );
 
-        Sort sort = buildSort(sortField, sortDirection);
+        Sort sort = SORT_RESOLVER.resolve(sortField, sortDirection);
 
         return paginationService.paginate(
-                userRepository, spec, sort, page, pageSize, DEFAULT_PAGE_SIZE,
+                userRepository, spec, sort, page, pageSize, defaultPageSize,
                 userEntityToUserDtoMapper
         );
     }
 
     private UserEntity loadActiveOrThrow(Long userId) {
         return userRepository.findByIdAndDeletedFalse(userId)
-                .orElseThrow(() -> new UnauthorizedException("user.notActive"));
+                .orElseThrow(() -> new UnauthorizedException(ErrorConstants.User.NOT_ACTIVE));
     }
 
     private UserEntity loadByIdOrThrow(Long userId) {
         return userRepository.findById(userId)
-                .orElseThrow(() -> new NotFoundException("user.notFound"));
-    }
-
-    private void attachClearedCookies(HttpServletResponse response) {
-        response.addHeader(HttpHeaders.SET_COOKIE, cookieService.clearAccessCookie().toString());
-        response.addHeader(HttpHeaders.SET_COOKIE, cookieService.clearRefreshCookie().toString());
-    }
-
-    private Sort buildSort(String sortField, String sortDirection) {
-        // Default: id desc, no extra tiebreaker (id is already unique).
-        if (sortField == null || sortField.isBlank()) {
-            return Sort.by(Sort.Order.desc(SORT_PATH_ID));
-        }
-        if (SORT_FIELD_NAME.equalsIgnoreCase(sortField)) {
-            Sort.Direction dir = directionFor(sortDirection, Sort.Direction.ASC);
-            return Sort.by(
-                    new Sort.Order(dir, SORT_PATH_FIRST_NAME),
-                    new Sort.Order(dir, SORT_PATH_LAST_NAME),
-                    Sort.Order.asc(SORT_PATH_ID)
-            );
-        }
-        if (SORT_FIELD_EMAIL.equalsIgnoreCase(sortField)) {
-            Sort.Direction dir = directionFor(sortDirection, Sort.Direction.ASC);
-            return Sort.by(new Sort.Order(dir, SORT_PATH_EMAIL), Sort.Order.asc(SORT_PATH_ID));
-        }
-        // sortField=id (or unknown) -> sort by id with default desc.
-        Sort.Direction dir = directionFor(sortDirection, Sort.Direction.DESC);
-        return Sort.by(new Sort.Order(dir, SORT_PATH_ID));
-    }
-
-    private Sort.Direction directionFor(String sortDirection, Sort.Direction fieldDefault) {
-        if (sortDirection == null || sortDirection.isBlank()) return fieldDefault;
-        if (SORT_DIRECTION_ASC.equalsIgnoreCase(sortDirection)) return Sort.Direction.ASC;
-        if (SORT_DIRECTION_DESC.equalsIgnoreCase(sortDirection)) return Sort.Direction.DESC;
-        return fieldDefault;
+                .orElseThrow(() -> new NotFoundException(ErrorConstants.User.NOT_FOUND));
     }
 }
