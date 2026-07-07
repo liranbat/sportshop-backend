@@ -16,7 +16,7 @@ import com.java.sadna.backend.sportshop.mapper.dto.response.ProductDetailDtoToPr
 import com.java.sadna.backend.sportshop.model.PagedResult;
 import com.java.sadna.backend.sportshop.model.ProductDetailDto;
 import com.java.sadna.backend.sportshop.model.ProductDto;
-import com.java.sadna.backend.sportshop.security.AuthorityRules;
+import com.java.sadna.backend.sportshop.common.constants.AuthorityConstants;
 import com.java.sadna.backend.sportshop.security.SecurityContextUtils;
 import com.java.sadna.backend.sportshop.service.ProductService;
 import org.springframework.http.ResponseEntity;
@@ -73,7 +73,7 @@ public class ProductController implements ProductsApi, AdminProductsApi {
     }
 
     @Override
-    @PreAuthorize(AuthorityRules.ADMIN)
+    @PreAuthorize(AuthorityConstants.ADMIN)
     public ResponseEntity<ProductPage> listAdminProducts(ProductArchiveStatusFilter archiveStatus,
                                                          Boolean isMultiSize,
                                                          String search,
@@ -93,7 +93,7 @@ public class ProductController implements ProductsApi, AdminProductsApi {
     }
 
     @Override
-    @PreAuthorize(AuthorityRules.ADMIN)
+    @PreAuthorize(AuthorityConstants.ADMIN)
     public ResponseEntity<ProductDetail> createAdminProduct(ProductCreateRequest req) {
         ProductDetailDto detail = productService.create(
                 productCreateRequestToProductCreateRequestDtoMapper.map(req)
@@ -102,7 +102,7 @@ public class ProductController implements ProductsApi, AdminProductsApi {
     }
 
     @Override
-    @PreAuthorize(AuthorityRules.ADMIN)
+    @PreAuthorize(AuthorityConstants.ADMIN)
     public ResponseEntity<ProductDetail> updateAdminProduct(Long id, ProductUpdateRequest req) {
         ProductDetailDto detail = productService.update(
                 id,
@@ -113,7 +113,7 @@ public class ProductController implements ProductsApi, AdminProductsApi {
     }
 
     @Override
-    @PreAuthorize(AuthorityRules.ADMIN)
+    @PreAuthorize(AuthorityConstants.ADMIN)
     public ResponseEntity<ProductDetail> archiveAdminProduct(Long id, ProductLifecycleRequest req) {
         ProductDetailDto detail = productService.archive(
                 id, req.getVersion(), SecurityContextUtils.currentUserIdOrThrow()
@@ -122,7 +122,7 @@ public class ProductController implements ProductsApi, AdminProductsApi {
     }
 
     @Override
-    @PreAuthorize(AuthorityRules.ADMIN)
+    @PreAuthorize(AuthorityConstants.ADMIN)
     public ResponseEntity<ProductDetail> restoreAdminProduct(Long id, ProductLifecycleRequest req) {
         ProductDetailDto detail = productService.restore(
                 id, req.getVersion(), SecurityContextUtils.currentUserIdOrThrow()

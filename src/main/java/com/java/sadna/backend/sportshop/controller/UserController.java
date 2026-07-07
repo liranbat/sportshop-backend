@@ -12,7 +12,7 @@ import com.java.sadna.backend.sportshop.mapper.dto.response.PagedUserDtoToUserLi
 import com.java.sadna.backend.sportshop.mapper.dto.response.UserDtoToUserResponseMapper;
 import com.java.sadna.backend.sportshop.model.PagedResult;
 import com.java.sadna.backend.sportshop.model.UserDto;
-import com.java.sadna.backend.sportshop.security.AuthorityRules;
+import com.java.sadna.backend.sportshop.common.constants.AuthorityConstants;
 import com.java.sadna.backend.sportshop.security.JwtCookieAuthenticationFilter;
 import com.java.sadna.backend.sportshop.security.Role;
 import com.java.sadna.backend.sportshop.security.SecurityContextUtils;
@@ -45,7 +45,7 @@ public class UserController implements UsersApi, AdminUsersApi {
     }
 
     @Override
-    @PreAuthorize(AuthorityRules.AUTHENTICATED)
+    @PreAuthorize(AuthorityConstants.AUTHENTICATED)
     public ResponseEntity<UserResponse> updateProfile(UpdateProfileRequest updateProfileRequest) {
         Long userId = SecurityContextUtils.currentUserIdOrThrow();
         return ResponseEntity.ok(
@@ -56,7 +56,7 @@ public class UserController implements UsersApi, AdminUsersApi {
     }
 
     @Override
-    @PreAuthorize(AuthorityRules.AUTHENTICATED)
+    @PreAuthorize(AuthorityConstants.AUTHENTICATED)
     public ResponseEntity<Void> changePassword(ChangePasswordRequest changePasswordRequest) {
         Long userId = SecurityContextUtils.currentUserIdOrThrow();
         userService.changePassword(userId, changePasswordRequest);
@@ -64,7 +64,7 @@ public class UserController implements UsersApi, AdminUsersApi {
     }
 
     @Override
-    @PreAuthorize(AuthorityRules.AUTHENTICATED)
+    @PreAuthorize(AuthorityConstants.AUTHENTICATED)
     public ResponseEntity<Void> deleteAccount(String xConfirmPassword) {
         Long userId = SecurityContextUtils.currentUserIdOrThrow();
         userService.deleteAccount(userId, xConfirmPassword, httpServletResponse);
@@ -73,7 +73,7 @@ public class UserController implements UsersApi, AdminUsersApi {
     }
 
     @Override
-    @PreAuthorize(AuthorityRules.ADMIN)
+    @PreAuthorize(AuthorityConstants.ADMIN)
     public ResponseEntity<UserListPage> listAdminUsers(UserRoleFilter role,
                                                        UserStatusFilter status,
                                                        String q,
@@ -91,7 +91,7 @@ public class UserController implements UsersApi, AdminUsersApi {
     }
 
     @Override
-    @PreAuthorize(AuthorityRules.ADMIN)
+    @PreAuthorize(AuthorityConstants.ADMIN)
     public ResponseEntity<UserResponse> getAdminUserById(Long id) {
         return ResponseEntity.ok(
                 userDtoToUserResponseMapper.map(userService.getUserByIdAsAdmin(id))
@@ -99,7 +99,7 @@ public class UserController implements UsersApi, AdminUsersApi {
     }
 
     @Override
-    @PreAuthorize(AuthorityRules.ADMIN)
+    @PreAuthorize(AuthorityConstants.ADMIN)
     public ResponseEntity<UserResponse> updateAdminUser(Long id, UpdateProfileRequest updateProfileRequest) {
         Long actorId = SecurityContextUtils.currentUserIdOrThrow();
         return ResponseEntity.ok(
@@ -110,7 +110,7 @@ public class UserController implements UsersApi, AdminUsersApi {
     }
 
     @Override
-    @PreAuthorize(AuthorityRules.ADMIN)
+    @PreAuthorize(AuthorityConstants.ADMIN)
     public ResponseEntity<UserResponse> promoteAdminUser(Long id) {
         Long actorId = SecurityContextUtils.currentUserIdOrThrow();
         return ResponseEntity.ok(
@@ -119,7 +119,7 @@ public class UserController implements UsersApi, AdminUsersApi {
     }
 
     @Override
-    @PreAuthorize(AuthorityRules.ADMIN)
+    @PreAuthorize(AuthorityConstants.ADMIN)
     public ResponseEntity<UserResponse> demoteAdminUser(Long id) {
         Long actorId = SecurityContextUtils.currentUserIdOrThrow();
         UserDto updated = userService.demoteFromAdmin(id, actorId);
@@ -135,7 +135,7 @@ public class UserController implements UsersApi, AdminUsersApi {
     }
 
     @Override
-    @PreAuthorize(AuthorityRules.ADMIN)
+    @PreAuthorize(AuthorityConstants.ADMIN)
     public ResponseEntity<UserResponse> softDeleteAdminUser(Long id) {
         Long actorId = SecurityContextUtils.currentUserIdOrThrow();
         UserDto updated = userService.softDeleteAsAdmin(id, actorId);
@@ -144,7 +144,7 @@ public class UserController implements UsersApi, AdminUsersApi {
     }
 
     @Override
-    @PreAuthorize(AuthorityRules.ADMIN)
+    @PreAuthorize(AuthorityConstants.ADMIN)
     public ResponseEntity<UserResponse> restoreAdminUser(Long id) {
         Long actorId = SecurityContextUtils.currentUserIdOrThrow();
         return ResponseEntity.ok(
