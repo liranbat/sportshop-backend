@@ -3,21 +3,14 @@ package com.java.sadna.backend.sportshop.mapper.dto.response;
 import com.java.sadna.backend.sportshop.api.generated.authusers.model.UserResponse;
 import com.java.sadna.backend.sportshop.mapper.BaseMapper;
 import com.java.sadna.backend.sportshop.model.UserDto;
-import org.springframework.stereotype.Component;
+import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
 
-@Component
-public class UserDtoToUserResponseMapper implements BaseMapper<UserDto, UserResponse> {
+@Mapper(componentModel = "spring")
+public interface UserDtoToUserResponseMapper extends BaseMapper<UserDto, UserResponse> {
 
     @Override
-    public UserResponse map(UserDto user) {
-        return new UserResponse(
-                user.getId(),
-                user.getFirstName(),
-                user.getLastName(),
-                user.getEmail(),
-                user.getPhone(),
-                user.isAdmin(),
-                user.isDeleted()
-        );
-    }
+    @Mapping(target = "isAdmin", source = "admin")
+    @Mapping(target = "isDeleted", source = "deleted")
+    UserResponse map(UserDto source);
 }

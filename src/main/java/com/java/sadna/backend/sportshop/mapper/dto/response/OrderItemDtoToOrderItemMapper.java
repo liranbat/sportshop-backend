@@ -3,20 +3,11 @@ package com.java.sadna.backend.sportshop.mapper.dto.response;
 import com.java.sadna.backend.sportshop.api.generated.orders.model.OrderItem;
 import com.java.sadna.backend.sportshop.mapper.BaseMapper;
 import com.java.sadna.backend.sportshop.model.OrderItemDto;
-import org.springframework.stereotype.Component;
+import org.mapstruct.Mapper;
 
-@Component
-public class OrderItemDtoToOrderItemMapper implements BaseMapper<OrderItemDto, OrderItem> {
+@Mapper(componentModel = "spring")
+public interface OrderItemDtoToOrderItemMapper extends BaseMapper<OrderItemDto, OrderItem> {
 
     @Override
-    public OrderItem map(OrderItemDto source) {
-        return new OrderItem(
-                source.getProductId(),
-                source.getProductName(),
-                source.getSize(),
-                source.getQuantity(),
-                source.getPricePerUnit(),
-                source.getLineTotal()
-        ).productImageUrl(source.getProductImageUrl());
-    }
+    OrderItem map(OrderItemDto source);
 }

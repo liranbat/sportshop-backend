@@ -1,50 +1,31 @@
 package com.java.sadna.backend.sportshop.mapper.dto.response;
 
 import com.java.sadna.backend.sportshop.api.generated.orders.model.OrderDetail;
-import com.java.sadna.backend.sportshop.api.generated.orders.model.OrderItem;
 import com.java.sadna.backend.sportshop.api.generated.orders.model.OrderShipping;
 import com.java.sadna.backend.sportshop.api.generated.orders.model.OrderStatus;
 import com.java.sadna.backend.sportshop.mapper.BaseMapper;
 import com.java.sadna.backend.sportshop.model.OrderDetailDto;
 import com.java.sadna.backend.sportshop.model.ShippingDetailsDto;
-import org.springframework.stereotype.Component;
+import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
 
-import java.util.List;
-
-@Component
-public class OrderDetailDtoToOrderDetailMapper implements BaseMapper<OrderDetailDto, OrderDetail> {
-
-    private final OrderItemDtoToOrderItemMapper orderItemDtoToOrderItemMapper;
-    private final OrderPaymentDtoToOrderPaymentMapper orderPaymentDtoToOrderPaymentMapper;
-    private final CustomerForOrderDtoToCustomerForOrderMapper customerForOrderDtoToCustomerForOrderMapper;
-
-    public OrderDetailDtoToOrderDetailMapper(OrderItemDtoToOrderItemMapper orderItemDtoToOrderItemMapper,
-                                             OrderPaymentDtoToOrderPaymentMapper orderPaymentDtoToOrderPaymentMapper,
-                                             CustomerForOrderDtoToCustomerForOrderMapper customerForOrderDtoToCustomerForOrderMapper) {
-        this.orderItemDtoToOrderItemMapper = orderItemDtoToOrderItemMapper;
-        this.orderPaymentDtoToOrderPaymentMapper = orderPaymentDtoToOrderPaymentMapper;
-        this.customerForOrderDtoToCustomerForOrderMapper = customerForOrderDtoToCustomerForOrderMapper;
-    }
+@Mapper(componentModel = "spring",
+        uses = {
+                OrderItemDtoToOrderItemMapper.class,
+                OrderPaymentDtoToOrderPaymentMapper.class,
+                CustomerForOrderDtoToCustomerForOrderMapper.class
+        },
+        imports = OrderStatus.class)
+public interface OrderDetailDtoToOrderDetailMapper extends BaseMapper<OrderDetailDto, OrderDetail> {
 
     @Override
-    public OrderDetail map(OrderDetailDto source) {
-        List<OrderItem> items = source.getItems().stream()
-                .map(orderItemDtoToOrderItemMapper::map)
-                .toList();
-        return new OrderDetail(
-                source.getOrderNumber(),
-                OrderStatus.fromValue(source.getStatus()),
-                source.getCreatedAt(),
-                source.getTotalPrice(),
-                source.getItemCount(),
-                items,
-                mapShipping(source.getShipping()),
-                orderPaymentDtoToOrderPaymentMapper.map(source.getPayment()),
-                customerForOrderDtoToCustomerForOrderMapper.map(source.getCustomer())
-        ).cancelledAt(source.getCancelledAt());
-    }
+    @Mapping(target = "status", expression = "java(OrderStatus.fromValue(source.getStatus()))")
+    OrderDetail map(OrderDetailDto source);
 
-    private OrderShipping mapShipping(ShippingDetailsDto shipping) {
+    default OrderShipping mapShipping(ShippingDetailsDto shipping) {
+        if (shipping == null) {
+            return null;
+        }
         return new OrderShipping(
                 shipping.getFullName(),
                 shipping.getEmail(),

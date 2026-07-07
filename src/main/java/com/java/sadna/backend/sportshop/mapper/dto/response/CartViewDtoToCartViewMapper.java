@@ -1,30 +1,13 @@
 package com.java.sadna.backend.sportshop.mapper.dto.response;
 
-import com.java.sadna.backend.sportshop.api.generated.cart.model.CartItem;
 import com.java.sadna.backend.sportshop.api.generated.cart.model.CartView;
 import com.java.sadna.backend.sportshop.mapper.BaseMapper;
 import com.java.sadna.backend.sportshop.model.CartViewDto;
-import org.springframework.stereotype.Component;
+import org.mapstruct.Mapper;
 
-import java.util.List;
-
-@Component
-public class CartViewDtoToCartViewMapper implements BaseMapper<CartViewDto, CartView> {
-
-    private final CartItemDtoToCartItemMapper cartItemDtoToCartItemMapper;
-
-    public CartViewDtoToCartViewMapper(CartItemDtoToCartItemMapper cartItemDtoToCartItemMapper) {
-        this.cartItemDtoToCartItemMapper = cartItemDtoToCartItemMapper;
-    }
+@Mapper(componentModel = "spring", uses = CartItemDtoToCartItemMapper.class)
+public interface CartViewDtoToCartViewMapper extends BaseMapper<CartViewDto, CartView> {
 
     @Override
-    public CartView map(CartViewDto source) {
-        List<CartItem> items = source.getItems().stream()
-                .map(cartItemDtoToCartItemMapper::map)
-                .toList();
-        return new CartView()
-                .items(items)
-                .itemCount(source.getItemCount())
-                .subtotal(source.getSubtotal());
-    }
+    CartView map(CartViewDto source);
 }

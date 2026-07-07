@@ -4,26 +4,15 @@ import com.java.sadna.backend.sportshop.api.generated.orders.model.OrderStatus;
 import com.java.sadna.backend.sportshop.api.generated.orders.model.OrderSummary;
 import com.java.sadna.backend.sportshop.mapper.BaseMapper;
 import com.java.sadna.backend.sportshop.model.OrderSummaryDto;
-import org.springframework.stereotype.Component;
+import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
 
-@Component
-public class OrderSummaryDtoToOrderSummaryMapper implements BaseMapper<OrderSummaryDto, OrderSummary> {
-
-    private final CustomerForOrderDtoToCustomerForOrderMapper customerForOrderDtoToCustomerForOrderMapper;
-
-    public OrderSummaryDtoToOrderSummaryMapper(CustomerForOrderDtoToCustomerForOrderMapper customerForOrderDtoToCustomerForOrderMapper) {
-        this.customerForOrderDtoToCustomerForOrderMapper = customerForOrderDtoToCustomerForOrderMapper;
-    }
+@Mapper(componentModel = "spring",
+        uses = CustomerForOrderDtoToCustomerForOrderMapper.class,
+        imports = OrderStatus.class)
+public interface OrderSummaryDtoToOrderSummaryMapper extends BaseMapper<OrderSummaryDto, OrderSummary> {
 
     @Override
-    public OrderSummary map(OrderSummaryDto source) {
-        return new OrderSummary(
-                source.getOrderNumber(),
-                OrderStatus.fromValue(source.getStatus()),
-                source.getCreatedAt(),
-                source.getItemCount(),
-                source.getTotalPrice(),
-                customerForOrderDtoToCustomerForOrderMapper.map(source.getCustomer())
-        );
-    }
+    @Mapping(target = "status", expression = "java(OrderStatus.fromValue(source.getStatus()))")
+    OrderSummary map(OrderSummaryDto source);
 }

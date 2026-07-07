@@ -4,20 +4,13 @@ import com.java.sadna.backend.sportshop.api.generated.orders.model.OrderPayment;
 import com.java.sadna.backend.sportshop.api.generated.orders.model.PaymentStatus;
 import com.java.sadna.backend.sportshop.mapper.BaseMapper;
 import com.java.sadna.backend.sportshop.model.OrderPaymentDto;
-import org.springframework.stereotype.Component;
+import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
 
-@Component
-public class OrderPaymentDtoToOrderPaymentMapper implements BaseMapper<OrderPaymentDto, OrderPayment> {
+@Mapper(componentModel = "spring", imports = PaymentStatus.class)
+public interface OrderPaymentDtoToOrderPaymentMapper extends BaseMapper<OrderPaymentDto, OrderPayment> {
 
     @Override
-    public OrderPayment map(OrderPaymentDto source) {
-        return new OrderPayment(
-                source.getProvider(),
-                source.getTransactionId(),
-                source.getAmount(),
-                source.getCurrency(),
-                PaymentStatus.fromValue(source.getStatus()),
-                source.getProcessedAt()
-        ).refundedAt(source.getRefundedAt());
-    }
+    @Mapping(target = "status", expression = "java(PaymentStatus.fromValue(source.getStatus()))")
+    OrderPayment map(OrderPaymentDto source);
 }
