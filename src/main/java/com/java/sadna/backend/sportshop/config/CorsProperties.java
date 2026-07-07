@@ -1,5 +1,6 @@
 package com.java.sadna.backend.sportshop.config;
 
+import com.java.sadna.backend.sportshop.common.constants.ApiHeaderConstants;
 import jakarta.validation.constraints.NotEmpty;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.DefaultValue;
@@ -20,7 +21,7 @@ public class CorsProperties {
             @NotEmpty List<String> allowedOrigins,
             @DefaultValue({"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"}) List<String> allowedMethods,
             @DefaultValue("*") List<String> allowedHeaders,
-            @DefaultValue({"X-Trace-Id", "X-Auth-Role"}) List<String> exposedHeaders) {
+            @DefaultValue({ApiHeaderConstants.X_TRACE_ID, ApiHeaderConstants.X_AUTH_ROLE}) List<String> exposedHeaders) {
         this.allowedOrigins = allowedOrigins;
         this.allowedMethods = allowedMethods;
         this.allowedHeaders = allowedHeaders;

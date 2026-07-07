@@ -7,6 +7,7 @@ import com.java.sadna.backend.sportshop.api.generated.authusers.model.RegisterRe
 import com.java.sadna.backend.sportshop.api.generated.authusers.model.SessionListPage;
 import com.java.sadna.backend.sportshop.api.generated.authusers.model.SessionRevokeAllResponse;
 import com.java.sadna.backend.sportshop.api.generated.authusers.model.UserResponse;
+import com.java.sadna.backend.sportshop.common.constants.ErrorConstants;
 import com.java.sadna.backend.sportshop.exception.BadRequestException;
 import com.java.sadna.backend.sportshop.mapper.dto.response.PagedSessionDtoToSessionListPageMapper;
 import com.java.sadna.backend.sportshop.mapper.dto.response.UserDtoToUserResponseMapper;
@@ -113,7 +114,7 @@ public class AuthController implements AuthApi, AdminSessionsApi {
     @PreAuthorize(AuthorityConstants.ADMIN)
     public ResponseEntity<SessionRevokeAllResponse> revokeAllAdminSessions(String scope) {
         if (!SCOPE_OTHERS.equals(scope)) {
-            throw new BadRequestException("auth.session.scopeMustBeOthers");
+            throw new BadRequestException(ErrorConstants.Auth.SESSION_SCOPE_MUST_BE_OTHERS);
         }
         Long actorId = SecurityContextUtils.currentUserIdOrThrow();
         int affected = authService.revokeAllSessionsExceptActor(actorId);

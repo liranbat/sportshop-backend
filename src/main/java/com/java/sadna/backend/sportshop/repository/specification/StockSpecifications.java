@@ -1,5 +1,7 @@
 package com.java.sadna.backend.sportshop.repository.specification;
 
+import com.java.sadna.backend.sportshop.common.constants.ProductConstants;
+import com.java.sadna.backend.sportshop.common.constants.ProductStockConstants;
 import com.java.sadna.backend.sportshop.common.util.SpecsUtil;
 import com.java.sadna.backend.sportshop.entity.ProductEntity;
 import com.java.sadna.backend.sportshop.entity.ProductStockEntity;
@@ -24,13 +26,13 @@ public final class StockSpecifications {
         String pattern = SpecsUtil.toContainsPattern(search);
         if (pattern == null) return null;
         return (root, query, cb) -> {
-            Join<ProductStockEntity, ProductEntity> product = root.join("product", JoinType.INNER);
-            return cb.like(cb.lower(product.get("name")), pattern);
+            Join<ProductStockEntity, ProductEntity> product = root.join(ProductStockConstants.PRODUCT, JoinType.INNER);
+            return cb.like(cb.lower(product.get(ProductConstants.NAME)), pattern);
         };
     }
 
     public static Specification<ProductStockEntity> sizeIn(Collection<String> sizes) {
-        return SpecsUtil.in("size", sizes);
+        return SpecsUtil.in(ProductStockConstants.SIZE, sizes);
     }
 
     // Threshold-aware stockStatus filter. LOW_STOCK uses the row's own low_stock_threshold;
@@ -38,21 +40,21 @@ public final class StockSpecifications {
     public static Specification<ProductStockEntity> stockStatus(String status) {
         if (status == null) return null;
         return (root, query, cb) -> switch (status) {
-            case STATUS_OUT_OF_STOCK -> cb.equal(root.get("quantity"), 0);
+            case STATUS_OUT_OF_STOCK -> cb.equal(root.get(ProductStockConstants.QUANTITY), 0);
             case STATUS_LOW_STOCK -> cb.and(
-                    cb.greaterThan(root.get("quantity"), 0),
-                    cb.isNotNull(root.get("lowStockThreshold")),
-                    cb.greaterThan(root.<Integer>get("lowStockThreshold"), 0),
-                    cb.lessThanOrEqualTo(root.get("quantity"), root.<Integer>get("lowStockThreshold"))
+                    cb.greaterThan(root.get(ProductStockConstants.QUANTITY), 0),
+                    cb.isNotNull(root.get(ProductStockConstants.LOW_STOCK_THRESHOLD)),
+                    cb.greaterThan(root.<Integer>get(ProductStockConstants.LOW_STOCK_THRESHOLD), 0),
+                    cb.lessThanOrEqualTo(root.get(ProductStockConstants.QUANTITY), root.<Integer>get(ProductStockConstants.LOW_STOCK_THRESHOLD))
             );
             // IN_STOCK == quantity > 0 AND NOT(low-stock); the not-low-stock part is
             // (threshold IS NULL OR threshold <= 0 OR quantity > threshold).
             case STATUS_IN_STOCK -> cb.and(
-                    cb.greaterThan(root.get("quantity"), 0),
+                    cb.greaterThan(root.get(ProductStockConstants.QUANTITY), 0),
                     cb.or(
-                            cb.isNull(root.get("lowStockThreshold")),
-                            cb.lessThanOrEqualTo(root.<Integer>get("lowStockThreshold"), 0),
-                            cb.greaterThan(root.<Integer>get("quantity"), root.<Integer>get("lowStockThreshold"))
+                            cb.isNull(root.get(ProductStockConstants.LOW_STOCK_THRESHOLD)),
+                            cb.lessThanOrEqualTo(root.<Integer>get(ProductStockConstants.LOW_STOCK_THRESHOLD), 0),
+                            cb.greaterThan(root.<Integer>get(ProductStockConstants.QUANTITY), root.<Integer>get(ProductStockConstants.LOW_STOCK_THRESHOLD))
                     )
             );
             default -> cb.conjunction();
@@ -62,10 +64,10 @@ public final class StockSpecifications {
     public static Specification<ProductStockEntity> archiveStatus(String archive) {
         if (archive == null) return null;
         return (root, query, cb) -> {
-            Join<ProductStockEntity, ProductEntity> product = root.join("product", JoinType.INNER);
+            Join<ProductStockEntity, ProductEntity> product = root.join(ProductStockConstants.PRODUCT, JoinType.INNER);
             return switch (archive) {
-                case ARCHIVE_ACTIVE -> cb.isFalse(product.get("archived"));
-                case ARCHIVE_ARCHIVED -> cb.isTrue(product.get("archived"));
+                case ARCHIVE_ACTIVE -> cb.isFalse(product.get(ProductConstants.ARCHIVED));
+                case ARCHIVE_ARCHIVED -> cb.isTrue(product.get(ProductConstants.ARCHIVED));
                 default -> cb.conjunction();
             };
         };

@@ -8,6 +8,7 @@ import com.java.sadna.backend.sportshop.api.generated.products.model.ProductDeta
 import com.java.sadna.backend.sportshop.api.generated.products.model.ProductLifecycleRequest;
 import com.java.sadna.backend.sportshop.api.generated.products.model.ProductPage;
 import com.java.sadna.backend.sportshop.api.generated.products.model.ProductUpdateRequest;
+import com.java.sadna.backend.sportshop.common.constants.ErrorConstants;
 import com.java.sadna.backend.sportshop.exception.NotFoundException;
 import com.java.sadna.backend.sportshop.mapper.dto.response.PagedProductDtoToProductPageMapper;
 import com.java.sadna.backend.sportshop.mapper.request.dto.ProductCreateRequestToProductCreateRequestDtoMapper;
@@ -67,7 +68,7 @@ public class ProductController implements ProductsApi, AdminProductsApi {
     public ResponseEntity<ProductDetail> getProduct(Long id) {
         ProductDetailDto detail = productService.getById(id);
         if (detail.getProduct().isArchived() && !SecurityContextUtils.currentUserIsAdmin()) {
-            throw new NotFoundException("product.notFound", id);
+            throw new NotFoundException(ErrorConstants.Product.NOT_FOUND, id);
         }
         return ResponseEntity.ok(productDetailDtoToProductDetailMapper.map(detail));
     }

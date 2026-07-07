@@ -1,5 +1,6 @@
 package com.java.sadna.backend.sportshop.repository.specification;
 
+import com.java.sadna.backend.sportshop.common.constants.RefreshTokenConstants;
 import com.java.sadna.backend.sportshop.common.util.SpecsUtil;
 import com.java.sadna.backend.sportshop.entity.RefreshTokenEntity;
 import com.java.sadna.backend.sportshop.entity.UserEntity;
@@ -16,7 +17,7 @@ public final class SessionSpecifications {
         String pattern = SpecsUtil.toContainsPattern(q);
         if (pattern == null) return null;
         return (root, query, cb) -> {
-            Join<RefreshTokenEntity, UserEntity> user = root.join("user", JoinType.INNER);
+            Join<RefreshTokenEntity, UserEntity> user = root.join(RefreshTokenConstants.USER, JoinType.INNER);
             return SpecsUtil.fullNameOrEmailLike(cb, user, pattern);
         };
     }

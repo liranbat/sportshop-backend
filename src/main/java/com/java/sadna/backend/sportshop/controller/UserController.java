@@ -11,9 +11,9 @@ import com.java.sadna.backend.sportshop.api.generated.authusers.model.UserStatus
 import com.java.sadna.backend.sportshop.mapper.dto.response.PagedUserDtoToUserListPageMapper;
 import com.java.sadna.backend.sportshop.mapper.dto.response.UserDtoToUserResponseMapper;
 import com.java.sadna.backend.sportshop.model.PagedResult;
+import com.java.sadna.backend.sportshop.common.constants.ApiHeaderConstants;
 import com.java.sadna.backend.sportshop.model.UserDto;
 import com.java.sadna.backend.sportshop.common.constants.AuthorityConstants;
-import com.java.sadna.backend.sportshop.security.JwtCookieAuthenticationFilter;
 import com.java.sadna.backend.sportshop.security.Role;
 import com.java.sadna.backend.sportshop.security.SecurityContextUtils;
 import com.java.sadna.backend.sportshop.service.UserService;
@@ -127,7 +127,7 @@ public class UserController implements UsersApi, AdminUsersApi {
         // frontend's auth-interceptor flips me.isAdmin on this very response
         if (id.equals(actorId)) {
             httpServletResponse.setHeader(
-                    JwtCookieAuthenticationFilter.ROLE_HEADER,
+                    ApiHeaderConstants.X_AUTH_ROLE,
                     Role.USER.headerValue()
             );
         }

@@ -1,5 +1,6 @@
 package com.java.sadna.backend.sportshop.service;
 
+import com.java.sadna.backend.sportshop.common.constants.ErrorConstants;
 import com.java.sadna.backend.sportshop.exception.BadRequestException;
 import com.java.sadna.backend.sportshop.exception.NotFoundException;
 import com.java.sadna.backend.sportshop.mapper.BaseMapper;
@@ -20,7 +21,7 @@ public class PaginationService {
     private int safePage(Integer page) {
         if (page == null) return 0;
         if (page < 0) {
-            throw new BadRequestException("pagination.pageNegative");
+            throw new BadRequestException(ErrorConstants.Pagination.PAGE_NEGATIVE);
         }
         return page;
     }
@@ -28,7 +29,7 @@ public class PaginationService {
     private int safePageSize(Integer pageSize, int defaultSize) {
         if (pageSize == null) return defaultSize;
         if (pageSize < 1) {
-            throw new BadRequestException("pagination.pageSizeMin");
+            throw new BadRequestException(ErrorConstants.Pagination.PAGE_SIZE_MIN);
         }
         return pageSize;
     }
@@ -57,7 +58,7 @@ public class PaginationService {
 
     private void ensurePageInRange(int page, int totalPages) {
         if (page > 0 && page >= totalPages) {
-            throw new NotFoundException("pagination.outOfRange", page, totalPages);
+            throw new NotFoundException(ErrorConstants.Pagination.OUT_OF_RANGE, page, totalPages);
         }
     }
 }

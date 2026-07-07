@@ -1,5 +1,6 @@
 package com.java.sadna.backend.sportshop.service;
 
+import com.java.sadna.backend.sportshop.common.constants.ErrorConstants;
 import com.java.sadna.backend.sportshop.config.PaymentProperties;
 import com.java.sadna.backend.sportshop.exception.BadGatewayException;
 import com.java.sadna.backend.sportshop.model.PaymentDetailsDto;
@@ -30,7 +31,7 @@ public class MockPaymentProcessor {
         log.info("Payment attempt: cardLast4={} amount={}", last4, amount);
         if (payment.getCardNumber() != null && payment.getCardNumber().endsWith(declineSuffix)) {
             log.warn("Payment declined: reasonCode={}", DECLINE_REASON);
-            throw new BadGatewayException("payment.declined");
+            throw new BadGatewayException(ErrorConstants.Payment.DECLINED);
         }
         String transactionId = TRANSACTION_PREFIX + UUID.randomUUID();
         log.info("Payment result: status=SUCCESS transactionId={}", transactionId);

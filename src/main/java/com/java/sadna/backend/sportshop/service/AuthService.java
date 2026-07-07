@@ -2,6 +2,10 @@ package com.java.sadna.backend.sportshop.service;
 
 import com.java.sadna.backend.sportshop.api.generated.authusers.model.LoginRequest;
 import com.java.sadna.backend.sportshop.api.generated.authusers.model.RegisterRequest;
+import com.java.sadna.backend.sportshop.common.constants.ErrorConstants;
+import com.java.sadna.backend.sportshop.common.constants.PageSizeConstants;
+import com.java.sadna.backend.sportshop.common.constants.RefreshTokenConstants;
+import com.java.sadna.backend.sportshop.common.constants.UserConstants;
 import com.java.sadna.backend.sportshop.common.util.SortDirections;
 import com.java.sadna.backend.sportshop.common.util.SortResolver;
 import com.java.sadna.backend.sportshop.config.AuthProperties;
@@ -40,11 +44,11 @@ public class AuthService {
 
     private static final SortResolver SESSION_SORT_RESOLVER = new SortResolver(
             Map.of(
-                    "user", List.of("user.email"),
-                    "expiresAt", List.of("expiresAt")
+                    RefreshTokenConstants.Sort.USER, List.of(RefreshTokenConstants.USER + "." + UserConstants.EMAIL),
+                    RefreshTokenConstants.Sort.EXPIRES_AT, List.of(RefreshTokenConstants.EXPIRES_AT)
             ),
-            SortResolver.orders("expiresAt", SortDirections.DESC, "id", SortDirections.ASC),
-            SortResolver.orders("id", SortDirections.ASC)
+            SortResolver.orders(RefreshTokenConstants.EXPIRES_AT, SortDirections.DESC, RefreshTokenConstants.ID, SortDirections.ASC),
+            SortResolver.orders(RefreshTokenConstants.ID, SortDirections.ASC)
     );
 
     private final UserRepository userRepository;
@@ -83,14 +87,14 @@ public class AuthService {
         this.refreshTokenTtl = authProperties.getRefreshTokenTtl();
         this.refreshTokenBytes = authProperties.getRefreshTokenBytes();
         this.defaultSessionPageSize = paginationProperties.getDefaultPageSize()
-                .getOrDefault("sessions", 20);
+                .getOrDefault(PageSizeConstants.SESSIONS_KEY, PageSizeConstants.SESSIONS_DEFAULT);
     }
 
     @Transactional
     public UserDto register(RegisterRequest dto) {
         String email = normalizeEmail(dto.getEmail());
         if (userRepository.existsByEmail(email)) {
-            throw new ConflictException("auth.emailTaken");
+            throw new ConflictException(ErrorConstants.Auth.EMAIL_TAKEN);
         }
         UserEntity entity = new UserEntity(
                 dto.getFirstName(),
@@ -107,9 +111,9 @@ public class AuthService {
     @Transactional
     public UserDto login(LoginRequest dto, HttpServletResponse response) {
         UserEntity entity = userRepository.findByEmailAndDeletedFalse(normalizeEmail(dto.getEmail()))
-                .orElseThrow(() -> new UnauthorizedException("auth.invalidCredentials"));
+                .orElseThrow(() -> new UnauthorizedException(ErrorConstants.Auth.INVALID_CREDENTIALS));
         if (!passwordEncoder.matches(dto.getPassword(), entity.getPasswordHash())) {
-            throw new UnauthorizedException("auth.invalidCredentials");
+            throw new UnauthorizedException(ErrorConstants.Auth.INVALID_CREDENTIALS);
         }
         issueSession(entity, response);
         return userEntityToUserDtoMapper.map(entity);
@@ -128,17 +132,17 @@ public class AuthService {
         // Missing / unknown / expired all surface the same message so an attacker
         // probing /auth/refresh cannot tell whether a cookie was even present.
         String refreshTokenValue = cookieService.readRefreshCookie(request)
-                .orElseThrow(() -> new UnauthorizedException("auth.invalidRefresh"));
+                .orElseThrow(() -> new UnauthorizedException(ErrorConstants.Auth.INVALID_REFRESH));
         RefreshTokenEntity row = refreshTokenRepository.findByToken(refreshTokenValue)
-                .orElseThrow(() -> new UnauthorizedException("auth.invalidRefresh"));
+                .orElseThrow(() -> new UnauthorizedException(ErrorConstants.Auth.INVALID_REFRESH));
         if (row.getExpiresAt().isBefore(OffsetDateTime.now())) {
             // Drop the dead row eagerly so /auth/refresh stops finding it on
             // subsequent retries and the user is forced through full login.
             refreshTokenRepository.delete(row);
-            throw new UnauthorizedException("auth.invalidRefresh");
+            throw new UnauthorizedException(ErrorConstants.Auth.INVALID_REFRESH);
         }
         UserEntity user = userRepository.findByIdAndDeletedFalse(row.getUserId())
-                .orElseThrow(() -> new UnauthorizedException("auth.invalidRefresh"));
+                .orElseThrow(() -> new UnauthorizedException(ErrorConstants.Auth.INVALID_REFRESH));
 
         String newRefreshToken = generateRefreshTokenValue();
         OffsetDateTime newExpiresAt = OffsetDateTime.now().plus(refreshTokenTtl);
@@ -154,7 +158,7 @@ public class AuthService {
     @Transactional(readOnly = true)
     public UserDto getMe(Long userId) {
         UserEntity entity = userRepository.findByIdAndDeletedFalse(userId)
-                .orElseThrow(() -> new UnauthorizedException("auth.session.invalidSession"));
+                .orElseThrow(() -> new UnauthorizedException(ErrorConstants.Auth.SESSION_INVALID));
         return userEntityToUserDtoMapper.map(entity);
     }
 
@@ -178,7 +182,7 @@ public class AuthService {
     public void revokeSession(Long sessionId, Long actorId) {
         int deleted = refreshTokenRepository.deleteByIdExcludingActor(sessionId, actorId);
         if (deleted == 0) {
-            throw new ConflictException("auth.session.revokeConflict");
+            throw new ConflictException(ErrorConstants.Auth.SESSION_REVOKE_CONFLICT);
         }
     }
 

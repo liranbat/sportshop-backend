@@ -2,6 +2,9 @@ package com.java.sadna.backend.sportshop.service;
 
 import com.java.sadna.backend.sportshop.api.generated.authusers.model.ChangePasswordRequest;
 import com.java.sadna.backend.sportshop.api.generated.authusers.model.UpdateProfileRequest;
+import com.java.sadna.backend.sportshop.common.constants.ErrorConstants;
+import com.java.sadna.backend.sportshop.common.constants.PageSizeConstants;
+import com.java.sadna.backend.sportshop.common.constants.UserConstants;
 import com.java.sadna.backend.sportshop.common.util.SortDirections;
 import com.java.sadna.backend.sportshop.common.util.SortResolver;
 import com.java.sadna.backend.sportshop.config.PaginationProperties;
@@ -32,12 +35,12 @@ public class UserService {
 
     private static final SortResolver SORT_RESOLVER = new SortResolver(
             Map.of(
-                    "name", List.of("firstName", "lastName"),
-                    "email", List.of("email"),
-                    "id", List.of("id")
+                    UserConstants.Sort.NAME, List.of(UserConstants.FIRST_NAME, UserConstants.LAST_NAME),
+                    UserConstants.Sort.EMAIL, List.of(UserConstants.EMAIL),
+                    UserConstants.Sort.ID, List.of(UserConstants.ID)
             ),
-            SortResolver.orders("id", SortDirections.DESC),
-            SortResolver.orders("id", SortDirections.ASC)
+            SortResolver.orders(UserConstants.ID, SortDirections.DESC),
+            SortResolver.orders(UserConstants.ID, SortDirections.ASC)
     );
 
     private final UserRepository userRepository;
@@ -65,7 +68,7 @@ public class UserService {
         this.paginationService = paginationService;
         this.userEntityToUserDtoMapper = userEntityToUserDtoMapper;
         this.defaultPageSize = paginationProperties.getDefaultPageSize()
-                .getOrDefault("users", 20);
+                .getOrDefault(PageSizeConstants.USERS_KEY, PageSizeConstants.USERS_DEFAULT);
     }
 
     @Transactional
@@ -82,9 +85,9 @@ public class UserService {
 
         if (updated == 0) {
             if (actorIsAdmin) {
-                throw new NotFoundException("user.notFound");
+                throw new NotFoundException(ErrorConstants.User.NOT_FOUND);
             }
-            throw new UnauthorizedException("user.notActive");
+            throw new UnauthorizedException(ErrorConstants.User.NOT_ACTIVE);
         }
 
         UserEntity fresh = actorIsAdmin
@@ -97,7 +100,7 @@ public class UserService {
     public void changePassword(Long userId, ChangePasswordRequest dto) {
         UserEntity entity = loadActiveOrThrow(userId);
         if (!passwordEncoder.matches(dto.getCurrentPassword(), entity.getPasswordHash())) {
-            throw new UnauthorizedException("user.currentPasswordIncorrect");
+            throw new UnauthorizedException(ErrorConstants.User.CURRENT_PASSWORD_INCORRECT);
         }
 
         int updated = userRepository.rotatePassword(
@@ -109,7 +112,7 @@ public class UserService {
         );
 
         if (updated == 0) {
-            throw new ConflictException("user.concurrentModification");
+            throw new ConflictException(ErrorConstants.User.CONCURRENT_MODIFICATION);
         }
     }
 
@@ -117,10 +120,10 @@ public class UserService {
     public void deleteAccount(Long userId, String currentPassword, HttpServletResponse response) {
         UserEntity entity = loadActiveOrThrow(userId);
         if (!passwordEncoder.matches(currentPassword, entity.getPasswordHash())) {
-            throw new UnauthorizedException("user.currentPasswordIncorrect");
+            throw new UnauthorizedException(ErrorConstants.User.CURRENT_PASSWORD_INCORRECT);
         }
         if (entity.isAdmin() && userRepository.countByAdminTrueAndDeletedFalse() <= 1) {
-            throw new ConflictException("user.deleteConflict");
+            throw new ConflictException(ErrorConstants.User.DELETE_CONFLICT);
         }
 
         int deleted = userRepository.softDelete(
@@ -130,7 +133,7 @@ public class UserService {
         );
 
         if (deleted == 0) {
-            throw new ConflictException("user.deleteConflict");
+            throw new ConflictException(ErrorConstants.User.DELETE_CONFLICT);
         }
         // Order matters: drop refresh tokens first so any in-flight refresh on this
         // user 401s immediately; the row stays soft-deleted but the session is gone.
@@ -154,7 +157,7 @@ public class UserService {
     public UserDto promoteToAdmin(Long targetUserId, Long actorUserId) {
         int updated = userRepository.applyPromote(targetUserId, actorUserId, OffsetDateTime.now());
         if (updated == 0) {
-            throw new ConflictException("user.promoteConflict");
+            throw new ConflictException(ErrorConstants.User.PROMOTE_CONFLICT);
         }
         return userEntityToUserDtoMapper.map(loadByIdOrThrow(targetUserId));
     }
@@ -163,7 +166,7 @@ public class UserService {
     public UserDto demoteFromAdmin(Long targetUserId, Long actorUserId) {
         int updated = userRepository.applyDemote(targetUserId, actorUserId, OffsetDateTime.now());
         if (updated == 0) {
-            throw new ConflictException("user.demoteConflict");
+            throw new ConflictException(ErrorConstants.User.DEMOTE_CONFLICT);
         }
         return userEntityToUserDtoMapper.map(loadByIdOrThrow(targetUserId));
     }
@@ -173,14 +176,14 @@ public class UserService {
         UserEntity entity = loadByIdOrThrow(targetUserId);
         if (entity.isAdmin() && !entity.isDeleted()
                 && userRepository.countByAdminTrueAndDeletedFalse() <= 1) {
-            throw new ConflictException("user.admin.lastAdminDelete");
+            throw new ConflictException(ErrorConstants.User.ADMIN_LAST_ADMIN_DELETE);
         }
 
         int updated = userRepository.applyAdminSoftDelete(
                 targetUserId, actorUserId, OffsetDateTime.now()
         );
         if (updated == 0) {
-            throw new ConflictException("user.admin.softDeleteConflict");
+            throw new ConflictException(ErrorConstants.User.ADMIN_SOFT_DELETE_CONFLICT);
         }
         // refresh tokens dropped in-txn so the target's in-flight refreshes 401
         // immediately; cart cleanup is fire-and-forget at the controller (cleanupDeletedUser)
@@ -194,7 +197,7 @@ public class UserService {
                 targetUserId, actorUserId, OffsetDateTime.now()
         );
         if (updated == 0) {
-            throw new ConflictException("user.admin.restoreConflict");
+            throw new ConflictException(ErrorConstants.User.ADMIN_RESTORE_CONFLICT);
         }
         return userEntityToUserDtoMapper.map(loadByIdOrThrow(targetUserId));
     }
@@ -223,11 +226,11 @@ public class UserService {
 
     private UserEntity loadActiveOrThrow(Long userId) {
         return userRepository.findByIdAndDeletedFalse(userId)
-                .orElseThrow(() -> new UnauthorizedException("user.notActive"));
+                .orElseThrow(() -> new UnauthorizedException(ErrorConstants.User.NOT_ACTIVE));
     }
 
     private UserEntity loadByIdOrThrow(Long userId) {
         return userRepository.findById(userId)
-                .orElseThrow(() -> new NotFoundException("user.notFound"));
+                .orElseThrow(() -> new NotFoundException(ErrorConstants.User.NOT_FOUND));
     }
 }

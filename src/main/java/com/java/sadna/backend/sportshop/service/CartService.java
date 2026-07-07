@@ -1,5 +1,6 @@
 package com.java.sadna.backend.sportshop.service;
 
+import com.java.sadna.backend.sportshop.common.constants.ErrorConstants;
 import com.java.sadna.backend.sportshop.entity.ProductStockEntity;
 import com.java.sadna.backend.sportshop.entity.id.CartItemId;
 import com.java.sadna.backend.sportshop.entity.id.ProductStockId;
@@ -64,7 +65,7 @@ public class CartService {
     @Transactional
     public void addItem(Long userId, Long productId, String size, int requestedQuantity) {
         if (requestedQuantity < 1) {
-            throw new BadRequestException("cart.qtyMinAdd");
+            throw new BadRequestException(ErrorConstants.Cart.QTY_MIN_ADD);
         }
 
         // Pre-validations surface precise messages in the sequential case. Any flip between
@@ -72,11 +73,11 @@ public class CartService {
 
         productRepository.findById(productId)
                 .filter(p -> !p.isArchived())
-                .orElseThrow(() -> new NotFoundException("cart.productUnavailable"));
+                .orElseThrow(() -> new NotFoundException(ErrorConstants.Cart.PRODUCT_UNAVAILABLE));
 
         ProductStockEntity stock = productStockRepository
                 .findById(new ProductStockId(productId, size))
-                .orElseThrow(() -> new NotFoundException("cart.sizeUnavailable"));
+                .orElseThrow(() -> new NotFoundException(ErrorConstants.Cart.SIZE_UNAVAILABLE));
 
         int existingQuantity = cartItemRepository
                 .findById(new CartItemId(userId, productId, size))
@@ -84,25 +85,25 @@ public class CartService {
                 .orElse(0);
 
         if (stock.getQuantity() < existingQuantity + requestedQuantity) {
-            throw new ConflictException("cart.insufficientStock");
+            throw new ConflictException(ErrorConstants.Cart.INSUFFICIENT_STOCK);
         }
 
         int affected = cartItemRepository.upsertIfStockAllows(userId, productId, size, requestedQuantity);
         if (affected == 0) {
-            throw new ConflictException("cart.addFailed");
+            throw new ConflictException(ErrorConstants.Cart.ADD_FAILED);
         }
     }
 
     @Transactional
     public void updateQuantity(Long userId, Long productId, String size, int quantity) {
         if (quantity < 1) {
-            throw new BadRequestException("cart.qtyMinPatch");
+            throw new BadRequestException(ErrorConstants.Cart.QTY_MIN_PATCH);
         }
 
         // PATCH only adjusts quantity. Archive / stock issues surface at validate / checkout time.
         int updated = cartItemRepository.updateQuantityByCompositeKey(userId, productId, size, quantity);
         if (updated == 0) {
-            throw new NotFoundException("cart.itemNotFound");
+            throw new NotFoundException(ErrorConstants.Cart.ITEM_NOT_FOUND);
         }
     }
 
@@ -117,7 +118,7 @@ public class CartService {
         List<CartViewRowDto> rows = dropHardDeletedProductRows(rawRows, userId);
 
         if (rows.isEmpty()) {
-            throw new ConflictException("cart.empty");
+            throw new ConflictException(ErrorConstants.Cart.EMPTY);
         }
 
         List<VersionMismatchDto> versionMismatches = new ArrayList<>();

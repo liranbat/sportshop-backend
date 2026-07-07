@@ -20,6 +20,9 @@ import com.java.sadna.backend.sportshop.repository.OrderItemRepository;
 import com.java.sadna.backend.sportshop.repository.OrderRepository;
 import com.java.sadna.backend.sportshop.repository.PaymentRepository;
 import com.java.sadna.backend.sportshop.common.util.DatesUtil;
+import com.java.sadna.backend.sportshop.common.constants.ErrorConstants;
+import com.java.sadna.backend.sportshop.common.constants.OrderConstants;
+import com.java.sadna.backend.sportshop.common.constants.PageSizeConstants;
 import com.java.sadna.backend.sportshop.common.util.OrderStatusTransitions;
 import com.java.sadna.backend.sportshop.common.util.SortDirections;
 import com.java.sadna.backend.sportshop.common.util.SortResolver;
@@ -45,11 +48,11 @@ public class OrderService {
 
     private static final SortResolver SORT_RESOLVER = new SortResolver(
             Map.of(
-                    "total", List.of("totalPrice"),
-                    "date",  List.of("createdAt")
+                    OrderConstants.Sort.TOTAL, List.of(OrderConstants.TOTAL_PRICE),
+                    OrderConstants.Sort.DATE,  List.of(OrderConstants.CREATED_AT)
             ),
-            SortResolver.orders("createdAt", SortDirections.DESC, "id", SortDirections.ASC),
-            SortResolver.orders("id", SortDirections.ASC)
+            SortResolver.orders(OrderConstants.CREATED_AT, SortDirections.DESC, OrderConstants.ID, SortDirections.ASC),
+            SortResolver.orders(OrderConstants.ID, SortDirections.ASC)
     );
 
     private static final Set<String> ADMIN_CANCELLABLE_STATUSES = Set.of(
@@ -98,7 +101,7 @@ public class OrderService {
         this.userEntityToCustomerForOrderDtoMapper = userEntityToCustomerForOrderDtoMapper;
         this.paginationService = paginationService;
         this.defaultPageSize = paginationProperties.getDefaultPageSize()
-                .getOrDefault("orders", 10);
+                .getOrDefault(PageSizeConstants.ORDERS_KEY, PageSizeConstants.ORDERS_DEFAULT);
     }
 
     @Transactional(readOnly = true)
@@ -142,7 +145,7 @@ public class OrderService {
         OrderEntity order = (userId == null
                 ? orderRepository.findWithUserByOrderNumber(orderNumber)
                 : orderRepository.findWithUserByOrderNumberAndUserId(orderNumber, userId))
-                .orElseThrow(() -> new NotFoundException("order.notFound"));
+                .orElseThrow(() -> new NotFoundException(ErrorConstants.Order.NOT_FOUND));
         return buildDetailDto(order);
     }
 
@@ -190,7 +193,7 @@ public class OrderService {
         OrderEntity order = (isAdmin
                 ? orderRepository.findWithUserByOrderNumber(orderNumber)
                 : orderRepository.findByOrderNumberAndUserId(orderNumber, userId))
-                .orElseThrow(() -> new NotFoundException("order.notFound"));
+                .orElseThrow(() -> new NotFoundException(ErrorConstants.Order.NOT_FOUND));
 
         boolean cancellable = isAdmin
                 ? ADMIN_CANCELLABLE_STATUSES.contains(order.getStatus())
@@ -198,7 +201,7 @@ public class OrderService {
         if (!cancellable) {
             log.warn("Cancel rejected: orderId={} actorId={} isAdmin={} currentStatus={}",
                     order.getId(), actorId, isAdmin, order.getStatus());
-            throw new ConflictException("order.cannotBeCancelled");
+            throw new ConflictException(ErrorConstants.Order.CANNOT_BE_CANCELLED);
         }
 
         String cancelStatus = isAdmin
@@ -208,7 +211,7 @@ public class OrderService {
         if (orderAffected == 0) {
             log.warn("Cancel race: orderId={} actorId={} isAdmin={} -- order moved out of the cancellable set between pre-flight and write",
                     order.getId(), actorId, isAdmin);
-            throw new ConflictException("order.cannotBeCancelled");
+            throw new ConflictException(ErrorConstants.Order.CANNOT_BE_CANCELLED);
         }
 
         // sort by (productId, size) so parallel cancels of *different* orders that share
@@ -246,17 +249,17 @@ public class OrderService {
         if (!OrderStatusTransitions.isAllowed(priorStatus, targetStatus)) {
             log.warn("Update status rejected (illegal transition): adminId={} orderNumber={} prior={} target={}",
                     adminId, orderNumber, priorStatus, targetStatus);
-            throw new BadRequestException("order.invalidStatusTransition", priorStatus, targetStatus);
+            throw new BadRequestException(ErrorConstants.Order.INVALID_STATUS_TRANSITION, priorStatus, targetStatus);
         }
 
         OrderEntity order = orderRepository.findByOrderNumber(orderNumber)
-                .orElseThrow(() -> new NotFoundException("order.notFound"));
+                .orElseThrow(() -> new NotFoundException(ErrorConstants.Order.NOT_FOUND));
 
         int affected = orderRepository.updateStatus(order.getId(), priorStatus, targetStatus, adminId);
         if (affected == 0) {
             log.warn("Update status race: orderId={} adminId={} prior={} target={} actual={}",
                     order.getId(), adminId, priorStatus, targetStatus, order.getStatus());
-            throw new ConflictException("order.statusChanged");
+            throw new ConflictException(ErrorConstants.Order.STATUS_CHANGED);
         }
 
         log.info("Update status completed: orderId={} adminId={} orderNumber={} prior={} target={}",
@@ -274,11 +277,11 @@ public class OrderService {
         if (!ADMIN_EDITABLE_SHIPPING_STATUSES.contains(priorStatus)) {
             log.warn("Update shipping rejected (status not editable): adminId={} orderNumber={} prior={}",
                     adminId, orderNumber, priorStatus);
-            throw new BadRequestException("order.shippingNotEditable", EDITABLE_SHIPPING_STATUSES_LIST);
+            throw new BadRequestException(ErrorConstants.Order.SHIPPING_NOT_EDITABLE, EDITABLE_SHIPPING_STATUSES_LIST);
         }
 
         OrderEntity order = orderRepository.findByOrderNumber(orderNumber)
-                .orElseThrow(() -> new NotFoundException("order.notFound"));
+                .orElseThrow(() -> new NotFoundException(ErrorConstants.Order.NOT_FOUND));
 
         int affected = orderRepository.updateShipping(
                 order.getId(),
@@ -293,7 +296,7 @@ public class OrderService {
         if (affected == 0) {
             log.warn("Update shipping race: orderId={} adminId={} prior={} actual={}",
                     order.getId(), adminId, priorStatus, order.getStatus());
-            throw new ConflictException("order.statusChanged");
+            throw new ConflictException(ErrorConstants.Order.STATUS_CHANGED);
         }
 
         log.info("Update shipping completed: orderId={} adminId={} orderNumber={} prior={}",

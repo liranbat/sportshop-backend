@@ -1,5 +1,6 @@
 package com.java.sadna.backend.sportshop.security;
 
+import com.java.sadna.backend.sportshop.common.constants.ApiHeaderConstants;
 import com.java.sadna.backend.sportshop.entity.UserEntity;
 import com.java.sadna.backend.sportshop.repository.UserRepository;
 import com.java.sadna.backend.sportshop.service.CookieService;
@@ -31,8 +32,6 @@ import java.util.Optional;
 // would also auto-register it as a generic servlet filter and we'd double-run.
 public class JwtCookieAuthenticationFilter extends OncePerRequestFilter {
 
-    public static final String ROLE_HEADER = "X-Auth-Role";
-
     private final JwtService jwtService;
     private final UserRepository userRepository;
     private final CookieService cookieService;
@@ -54,7 +53,7 @@ public class JwtCookieAuthenticationFilter extends OncePerRequestFilter {
                     .flatMap(this::loadActiveUser)
                     .ifPresent(entity -> {
                         populateSecurityContext(entity);
-                        response.setHeader(ROLE_HEADER, (entity.isAdmin() ? Role.ADMIN : Role.USER).headerValue());
+                        response.setHeader(ApiHeaderConstants.X_AUTH_ROLE, (entity.isAdmin() ? Role.ADMIN : Role.USER).headerValue());
                     });
         }
         chain.doFilter(request, response);

@@ -2,7 +2,10 @@ package com.java.sadna.backend.sportshop.service;
 
 import com.java.sadna.backend.sportshop.api.generated.stock.model.StockArchiveStatusFilter;
 import com.java.sadna.backend.sportshop.api.generated.stock.model.StockStatusFilter;
+import com.java.sadna.backend.sportshop.common.constants.ErrorConstants;
+import com.java.sadna.backend.sportshop.common.constants.PageSizeConstants;
 import com.java.sadna.backend.sportshop.common.constants.ProductConstants;
+import com.java.sadna.backend.sportshop.common.constants.ProductStockConstants;
 import com.java.sadna.backend.sportshop.common.util.SortDirections;
 import com.java.sadna.backend.sportshop.common.util.SortResolver;
 import com.java.sadna.backend.sportshop.config.PaginationProperties;
@@ -32,12 +35,17 @@ public class StockService {
 
     private static final SortResolver SORT_RESOLVER = new SortResolver(
             Map.of(
-                    "name", List.of("product.name"),
-                    "quantity", List.of("quantity"),
-                    "threshold", List.of("lowStockThreshold")
+                    ProductStockConstants.Sort.NAME, List.of(ProductStockConstants.PRODUCT + "." + ProductConstants.NAME),
+                    ProductStockConstants.Sort.QUANTITY, List.of(ProductStockConstants.QUANTITY),
+                    ProductStockConstants.Sort.THRESHOLD, List.of(ProductStockConstants.LOW_STOCK_THRESHOLD)
             ),
-            SortResolver.orders("product.name", SortDirections.ASC, "size", SortDirections.ASC, "productId", SortDirections.ASC),
-            SortResolver.orders("size", SortDirections.ASC, "productId", SortDirections.ASC)
+            SortResolver.orders(
+                    ProductStockConstants.PRODUCT + "." + ProductConstants.NAME, SortDirections.ASC,
+                    ProductStockConstants.SIZE, SortDirections.ASC,
+                    ProductStockConstants.PRODUCT_ID, SortDirections.ASC),
+            SortResolver.orders(
+                    ProductStockConstants.SIZE, SortDirections.ASC,
+                    ProductStockConstants.PRODUCT_ID, SortDirections.ASC)
     );
 
     private final ProductStockRepository productStockRepository;
@@ -56,7 +64,7 @@ public class StockService {
         this.paginationService = paginationService;
         this.productStockEntityToStockRowDtoMapper = productStockEntityToStockRowDtoMapper;
         this.defaultPageSize = paginationProperties.getDefaultPageSize()
-                .getOrDefault("stock", 50);
+                .getOrDefault(PageSizeConstants.STOCK_KEY, PageSizeConstants.STOCK_DEFAULT);
     }
 
     @Transactional(readOnly = true)
@@ -93,11 +101,11 @@ public class StockService {
     @Transactional
     public StockRowDto adjustQuantity(Long productId, String size, int delta) {
         if (delta == 0) {
-            throw new BadRequestException("stock.deltaNonZero");
+            throw new BadRequestException(ErrorConstants.Stock.DELTA_NON_ZERO);
         }
         int affected = productStockRepository.adminAdjust(productId, size, delta);
         if (affected == 0) {
-            throw new ConflictException("stock.adjustConflict", delta);
+            throw new ConflictException(ErrorConstants.Stock.ADJUST_CONFLICT, delta);
         }
         return readRowOrThrow(productId, size);
     }
@@ -106,18 +114,18 @@ public class StockService {
     public StockRowDto addSize(Long productId, String size, int quantity, Integer threshold) {
         String trimmed = size == null ? "" : size.trim();
         if (trimmed.isEmpty()) {
-            throw new BadRequestException("stock.sizeBlank");
+            throw new BadRequestException(ErrorConstants.Stock.SIZE_BLANK);
         }
         if (ProductConstants.ONE_SIZE_TOKEN.equals(trimmed)) {
-            throw new BadRequestException("stock.oneSizeReserved", ProductConstants.ONE_SIZE_TOKEN);
+            throw new BadRequestException(ErrorConstants.Stock.ONE_SIZE_RESERVED, ProductConstants.ONE_SIZE_TOKEN);
         }
 
         // SELECT FOR UPDATE on the product so a concurrent is_multi_size flip can't interleave
         // between our guard and the INSERT below.
         ProductEntity product = productRepository.findByIdWithLock(productId)
-                .orElseThrow(() -> new NotFoundException("product.notFound", productId));
+                .orElseThrow(() -> new NotFoundException(ErrorConstants.Product.NOT_FOUND, productId));
         if (!product.isMultiSize()) {
-            throw new BadRequestException("stock.multiSize.cannotAdd", productId);
+            throw new BadRequestException(ErrorConstants.Stock.MULTI_SIZE_CANNOT_ADD, productId);
         }
         try {
             productStockRepository.adminInsert(productId, trimmed, quantity, threshold);
@@ -130,12 +138,12 @@ public class StockService {
     @Transactional
     public void removeSize(Long productId, String size) {
         if (ProductConstants.ONE_SIZE_TOKEN.equals(size)) {
-            throw new BadRequestException("stock.oneSizeNotRemovable", ProductConstants.ONE_SIZE_TOKEN);
+            throw new BadRequestException(ErrorConstants.Stock.ONE_SIZE_NOT_REMOVABLE, ProductConstants.ONE_SIZE_TOKEN);
         }
         ProductEntity product = productRepository.findById(productId)
-                .orElseThrow(() -> new NotFoundException("product.notFound", productId));
+                .orElseThrow(() -> new NotFoundException(ErrorConstants.Product.NOT_FOUND, productId));
         if (!product.isMultiSize()) {
-            throw new BadRequestException("stock.multiSize.cannotRemove", productId);
+            throw new BadRequestException(ErrorConstants.Stock.MULTI_SIZE_CANNOT_REMOVE, productId);
         }
         // Idempotent: 0 rows means the size was already removed; surface as success per swagger.
         productStockRepository.adminDelete(productId, size);
@@ -148,10 +156,10 @@ public class StockService {
     }
 
     private static NotFoundException stockRowNotFound(Long productId, String size) {
-        return new NotFoundException("stock.rowNotFound", productId, size);
+        return new NotFoundException(ErrorConstants.Stock.ROW_NOT_FOUND, productId, size);
     }
 
     private static ConflictException sizeAlreadyExists(Long productId, String size) {
-        return new ConflictException("stock.sizeAlreadyExists", productId, size);
+        return new ConflictException(ErrorConstants.Stock.SIZE_ALREADY_EXISTS, productId, size);
     }
 }

@@ -1,5 +1,6 @@
 package com.java.sadna.backend.sportshop.model.enums;
 
+import com.java.sadna.backend.sportshop.common.constants.ErrorConstants;
 import com.java.sadna.backend.sportshop.config.ImagesProperties;
 import com.java.sadna.backend.sportshop.exception.BadRequestException;
 
@@ -78,6 +79,6 @@ public enum ResourceImagePolicy {
                 }
             }
         }
-        throw new BadRequestException("http.badRequest.typeMismatch", segment, "resourceType");
+        throw new BadRequestException(ErrorConstants.Http.BAD_REQUEST_TYPE_MISMATCH, segment, "resourceType");
     }
 }

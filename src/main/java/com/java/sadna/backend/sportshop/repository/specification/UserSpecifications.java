@@ -1,5 +1,6 @@
 package com.java.sadna.backend.sportshop.repository.specification;
 
+import com.java.sadna.backend.sportshop.common.constants.UserConstants;
 import com.java.sadna.backend.sportshop.common.util.SpecsUtil;
 import com.java.sadna.backend.sportshop.entity.UserEntity;
 import org.springframework.data.jpa.domain.Specification;
@@ -10,11 +11,11 @@ public final class UserSpecifications {
     }
 
     public static Specification<UserEntity> isAdminEquals(Boolean isAdmin) {
-        return SpecsUtil.equal("admin", isAdmin);
+        return SpecsUtil.equal(UserConstants.ADMIN, isAdmin);
     }
 
     public static Specification<UserEntity> isDeletedEquals(Boolean isDeleted) {
-        return SpecsUtil.equal("deleted", isDeleted);
+        return SpecsUtil.equal(UserConstants.DELETED, isDeleted);
     }
 
     public static Specification<UserEntity> searchMatches(String q) {
@@ -22,7 +23,7 @@ public final class UserSpecifications {
         if (pattern == null) return null;
         return (root, query, cb) -> cb.or(
                 SpecsUtil.fullNameOrEmailLike(cb, root, pattern),
-                cb.like(cb.lower(root.get("phone")), pattern)
+                cb.like(cb.lower(root.get(UserConstants.PHONE)), pattern)
         );
     }
 }

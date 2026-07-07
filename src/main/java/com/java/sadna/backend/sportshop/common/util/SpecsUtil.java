@@ -1,5 +1,6 @@
 package com.java.sadna.backend.sportshop.common.util;
 
+import com.java.sadna.backend.sportshop.common.constants.UserConstants;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.Expression;
 import jakarta.persistence.criteria.From;
@@ -36,9 +37,9 @@ public final class SpecsUtil {
     public static Predicate fullNameOrEmailLike(CriteriaBuilder cb,
                                                 From<?, ?> userPath,
                                                 String pattern) {
-        Path<String> firstName = userPath.get("firstName");
-        Path<String> lastName = userPath.get("lastName");
-        Path<String> email = userPath.get("email");
+        Path<String> firstName = userPath.get(UserConstants.FIRST_NAME);
+        Path<String> lastName = userPath.get(UserConstants.LAST_NAME);
+        Path<String> email = userPath.get(UserConstants.EMAIL);
         Expression<String> firstSpaceLast = cb.lower(cb.concat(cb.concat(firstName, " "), lastName));
         Expression<String> lastSpaceFirst = cb.lower(cb.concat(cb.concat(lastName, " "), firstName));
         return cb.or(

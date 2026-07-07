@@ -1,5 +1,6 @@
 package com.java.sadna.backend.sportshop.service;
 
+import com.java.sadna.backend.sportshop.common.constants.ErrorConstants;
 import com.java.sadna.backend.sportshop.common.util.OrderStatusTransitions;
 import com.java.sadna.backend.sportshop.common.util.PaymentStatuses;
 import com.java.sadna.backend.sportshop.config.CheckoutProperties;
@@ -83,8 +84,8 @@ public class CheckoutService {
         if (!validation.isOk()) {
             boolean versionDrift = !validation.getVersionMismatches().isEmpty();
             String key = versionDrift
-                    ? "checkout.versionMismatch"
-                    : "checkout.insufficientStock.preflight";
+                    ? ErrorConstants.Checkout.VERSION_MISMATCH
+                    : ErrorConstants.Checkout.INSUFFICIENT_STOCK_PREFLIGHT;
             log.warn("Checkout pre-flight failed: versionDrift={}", versionDrift);
             throw new ConflictException(key);
         }
@@ -109,7 +110,7 @@ public class CheckoutService {
             if (affected == 0) {
                 log.warn("Stock race: productId={} size={} requestedQty={} expectedVersion={}",
                         row.getProductId(), row.getSize(), requestedQty, expectedVersion);
-                throw new ConflictException("checkout.insufficientStock.race");
+                throw new ConflictException(ErrorConstants.Checkout.INSUFFICIENT_STOCK_RACE);
             }
         }
 
@@ -143,7 +144,7 @@ public class CheckoutService {
         }
         if (orderId == null) {
             log.error("Order number exhausted: attempts={}", orderNumberRetryCap);
-            throw new InternalServerErrorException("checkout.orderNumberExhausted");
+            throw new InternalServerErrorException(ErrorConstants.Checkout.ORDER_NUMBER_EXHAUSTED);
         }
         log.info("Order persisted: orderId={} orderNumber={} total={} itemCount={}",
                 orderId, orderNumber, totalPrice, itemCount);

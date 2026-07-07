@@ -1,5 +1,8 @@
 package com.java.sadna.backend.sportshop.service;
 
+import com.java.sadna.backend.sportshop.common.constants.CategoryConstants;
+import com.java.sadna.backend.sportshop.common.constants.ErrorConstants;
+import com.java.sadna.backend.sportshop.common.constants.PageSizeConstants;
 import com.java.sadna.backend.sportshop.common.constants.ProductConstants;
 import com.java.sadna.backend.sportshop.common.util.SortDirections;
 import com.java.sadna.backend.sportshop.common.util.SortResolver;
@@ -41,13 +44,13 @@ public class ProductService {
 
     private static final SortResolver SORT_RESOLVER = new SortResolver(
             Map.of(
-                    "price", List.of("price"),
-                    "name", List.of("name"),
-                    "category", List.of("category.name"),
-                    "updatedAt", List.of("updatedAt")
+                    ProductConstants.Sort.PRICE, List.of(ProductConstants.PRICE),
+                    ProductConstants.Sort.NAME, List.of(ProductConstants.NAME),
+                    ProductConstants.Sort.CATEGORY, List.of(ProductConstants.CATEGORY + "." + CategoryConstants.NAME),
+                    ProductConstants.Sort.UPDATED_AT, List.of(ProductConstants.UPDATED_AT)
             ),
-            SortResolver.orders("id", SortDirections.ASC),
-            SortResolver.orders("id", SortDirections.ASC)
+            SortResolver.orders(ProductConstants.ID, SortDirections.ASC),
+            SortResolver.orders(ProductConstants.ID, SortDirections.ASC)
     );
 
     private static final int SIZE_TOKEN_MAX_LENGTH = 20;
@@ -80,7 +83,7 @@ public class ProductService {
         this.paginationService = paginationService;
         this.imagesProperties = imagesProperties;
         this.defaultPageSize = paginationProperties.getDefaultPageSize()
-                .getOrDefault("products", 9);
+                .getOrDefault(PageSizeConstants.PRODUCTS_KEY, PageSizeConstants.PRODUCTS_DEFAULT);
     }
 
     @Transactional(readOnly = true)
@@ -142,9 +145,9 @@ public class ProductService {
     @Transactional
     public ProductDetailDto update(Long productId, ProductUpdateRequestDto input, Long actorId) {
         ProductEntity product = productRepository.findById(productId)
-                .orElseThrow(() -> new NotFoundException("product.notFound", productId));
+                .orElseThrow(() -> new NotFoundException(ErrorConstants.Product.NOT_FOUND, productId));
         if (product.getVersion() != input.getVersion()) {
-            throw new ConflictException("product.versionMismatch");
+            throw new ConflictException(ErrorConstants.Product.VERSION_MISMATCH);
         }
         boolean wasMultiSize = product.isMultiSize();
 
@@ -175,9 +178,9 @@ public class ProductService {
     @Transactional
     public ProductDetailDto archive(Long productId, int loadedVersion, Long actorId) {
         ProductEntity product = productRepository.findById(productId)
-                .orElseThrow(() -> new NotFoundException("product.notFound", productId));
+                .orElseThrow(() -> new NotFoundException(ErrorConstants.Product.NOT_FOUND, productId));
         if (product.isArchived() || product.getVersion() != loadedVersion) {
-            throw new ConflictException("product.versionMismatch");
+            throw new ConflictException(ErrorConstants.Product.VERSION_MISMATCH);
         }
 
         OffsetDateTime now = OffsetDateTime.now();
@@ -194,9 +197,9 @@ public class ProductService {
     @Transactional
     public ProductDetailDto restore(Long productId, int loadedVersion, Long actorId) {
         ProductEntity product = productRepository.findById(productId)
-                .orElseThrow(() -> new NotFoundException("product.notFound", productId));
+                .orElseThrow(() -> new NotFoundException(ErrorConstants.Product.NOT_FOUND, productId));
         if (!product.isArchived() || product.getVersion() != loadedVersion) {
-            throw new ConflictException("product.versionMismatch");
+            throw new ConflictException(ErrorConstants.Product.VERSION_MISMATCH);
         }
 
         OffsetDateTime now = OffsetDateTime.now();
@@ -214,14 +217,14 @@ public class ProductService {
         try {
             productRepository.saveAndFlush(product);
         } catch (OptimisticLockingFailureException ex) {
-            throw new ConflictException("product.versionMismatch");
+            throw new ConflictException(ErrorConstants.Product.VERSION_MISMATCH);
         }
     }
 
     @Transactional(readOnly = true)
     public ProductDetailDto getById(Long id) {
         ProductEntity productEntity = productRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("product.notFound", id));
+                .orElseThrow(() -> new NotFoundException(ErrorConstants.Product.NOT_FOUND, id));
         return buildDetailDto(productEntity);
     }
 
@@ -242,33 +245,33 @@ public class ProductService {
 
     private static void validateStockBySize(boolean isMultiSize, Map<String, ProductStockInputDto> stockBySize) {
         if (stockBySize == null || stockBySize.isEmpty()) {
-            throw new BadRequestException("product.stock.entryRequired");
+            throw new BadRequestException(ErrorConstants.Product.STOCK_ENTRY_REQUIRED);
         }
         stockBySize.forEach((sizeToken, stock) -> {
             if (sizeToken == null || sizeToken.isBlank() || sizeToken.length() > SIZE_TOKEN_MAX_LENGTH) {
-                throw new BadRequestException("product.stock.sizeTokenInvalid", SIZE_TOKEN_MAX_LENGTH);
+                throw new BadRequestException(ErrorConstants.Product.STOCK_SIZE_TOKEN_INVALID, SIZE_TOKEN_MAX_LENGTH);
             }
             if (stock == null) {
-                throw new BadRequestException("product.stock.entryMissing", sizeToken);
+                throw new BadRequestException(ErrorConstants.Product.STOCK_ENTRY_MISSING, sizeToken);
             }
             if (stock.getQuantity() < 0) {
-                throw new BadRequestException("product.stock.qtyNonNegative", sizeToken);
+                throw new BadRequestException(ErrorConstants.Product.STOCK_QTY_NON_NEGATIVE, sizeToken);
             }
             if (stock.getLowStockThreshold() != null && stock.getLowStockThreshold() < 0) {
-                throw new BadRequestException("product.stock.thresholdNonNegative", sizeToken);
+                throw new BadRequestException(ErrorConstants.Product.STOCK_THRESHOLD_NON_NEGATIVE, sizeToken);
             }
         });
         if (isMultiSize) {
             if (stockBySize.containsKey(ProductConstants.ONE_SIZE_TOKEN)) {
-                throw new BadRequestException("product.stock.multiSizeCannotBeOne", ProductConstants.ONE_SIZE_TOKEN);
+                throw new BadRequestException(ErrorConstants.Product.STOCK_MULTI_SIZE_CANNOT_BE_ONE, ProductConstants.ONE_SIZE_TOKEN);
             }
         } else if (stockBySize.size() != 1 || !stockBySize.containsKey(ProductConstants.ONE_SIZE_TOKEN)) {
-            throw new BadRequestException("product.stock.singleSizeMustBeOne", ProductConstants.ONE_SIZE_TOKEN);
+            throw new BadRequestException(ErrorConstants.Product.STOCK_SINGLE_SIZE_MUST_BE_ONE, ProductConstants.ONE_SIZE_TOKEN);
         }
     }
 
     private String parseProductImageFilenameOrThrow(String imageUrl) {
         return imagesProperties.parseFilenameOrBadRequest(
-                ResourceImagePolicy.PRODUCTS, imageUrl, "product.invalidImageUrl");
+                ResourceImagePolicy.PRODUCTS, imageUrl, ErrorConstants.Product.INVALID_IMAGE_URL);
     }
 }

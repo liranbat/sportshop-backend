@@ -1,5 +1,6 @@
 package com.java.sadna.backend.sportshop.common.util;
 
+import com.java.sadna.backend.sportshop.common.constants.ErrorConstants;
 import com.java.sadna.backend.sportshop.exception.BadRequestException;
 import org.springframework.data.domain.Sort;
 
@@ -47,17 +48,17 @@ public final class SortResolver {
             return Sort.by(defaultSort);
         }
         if (!hasField) {
-            throw new BadRequestException("http.badRequest.sortFieldRequired");
+            throw new BadRequestException(ErrorConstants.Http.BAD_REQUEST_SORT_FIELD_REQUIRED);
         }
         List<String> properties = fieldToProperties.get(sortField.toLowerCase(Locale.ROOT));
         if (properties == null || properties.isEmpty()) {
-            throw new BadRequestException("http.badRequest.unknownSortField", sortField);
+            throw new BadRequestException(ErrorConstants.Http.BAD_REQUEST_UNKNOWN_SORT_FIELD, sortField);
         }
         Sort.Direction dir;
         try {
             dir = SortDirections.parse(sortDirection);
         } catch (IllegalArgumentException e) {
-            throw new BadRequestException("http.badRequest.invalidSortDirection", sortDirection);
+            throw new BadRequestException(ErrorConstants.Http.BAD_REQUEST_INVALID_SORT_DIRECTION, sortDirection);
         }
         List<Sort.Order> orders = new ArrayList<>(properties.size() + tiebreakers.size());
         for (String property : properties) {

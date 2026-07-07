@@ -1,6 +1,6 @@
 package com.java.sadna.backend.sportshop.config;
 
-import com.java.sadna.backend.sportshop.security.JwtCookieAuthenticationFilter;
+import com.java.sadna.backend.sportshop.common.constants.ApiHeaderConstants;
 import org.springframework.boot.autoconfigure.security.SecurityProperties;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
@@ -49,8 +49,8 @@ public class WebMvcConfig implements WebMvcConfigurer {
                 .allowedMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
                 .allowedHeaders("*")
                 .exposedHeaders(
-                        TraceIdResponseHeaderFilter.HEADER,
-                        JwtCookieAuthenticationFilter.ROLE_HEADER)
+                        ApiHeaderConstants.X_TRACE_ID,
+                        ApiHeaderConstants.X_AUTH_ROLE)
                 .allowCredentials(true);
     }
 
