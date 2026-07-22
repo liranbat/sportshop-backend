@@ -107,4 +107,4 @@ app:
     provider: MOCK_CARD
     currency: USD
     mock:
-      decline-suffix: "0000"
+      decline-suffix: "${SPORTSHOP_PAYMENT_MOCK_DECLINE_SUFFIX:0000}"
