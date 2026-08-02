@@ -94,6 +94,8 @@ app:
     cookie:
       access-name: sportshop_access_token
       refresh-name: sportshop_refresh_token
+  cache:
+    categories-ttl: ${SPORTSHOP_CACHE_CATEGORIES_TTL:PT1M}
   pagination:
     default-page-size:
       orders: 10
