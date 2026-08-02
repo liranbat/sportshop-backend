@@ -1,6 +1,7 @@
 package com.java.sadna.backend.sportshop.service;
 
 import com.java.sadna.backend.sportshop.common.constants.ErrorConstants;
+import com.java.sadna.backend.sportshop.config.CacheConfig;
 import com.java.sadna.backend.sportshop.config.ImagesProperties;
 import com.java.sadna.backend.sportshop.entity.CategoryEntity;
 import com.java.sadna.backend.sportshop.exception.BadRequestException;
@@ -12,6 +13,8 @@ import com.java.sadna.backend.sportshop.model.enums.ResourceImagePolicy;
 import com.java.sadna.backend.sportshop.repository.CategoryRepository;
 import com.java.sadna.backend.sportshop.repository.ProductRepository;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -42,22 +45,32 @@ public class CategoryService {
         this.imagesProperties = imagesProperties;
     }
 
+    @Cacheable(
+            cacheNames = CacheConfig.CATEGORIES,
+            key = "#active == null ? 'ALL' : (#active ? 'ACTIVE' : 'INACTIVE')")
     @Transactional(readOnly = true)
     public List<CategoryDto> list(Boolean active) {
-        return categoryRepository.findAll().stream()
+        // Only runs on cache miss — a HIT never enters this method.
+        log.info("Categories cache miss — loading from DB (active={})", active);
+        List<CategoryDto> categories = categoryRepository.findAll().stream()
                 .filter(c -> active == null || c.isDeleted() != active)
                 .sorted(LIST_ORDER)
                 .map(categoryEntityToCategoryDtoMapper::map)
                 .toList();
+        log.info("Categories loaded from DB: active={} count={}", active, categories.size());
+        return categories;
     }
 
+    @CacheEvict(cacheNames = CacheConfig.CATEGORIES, allEntries = true)
     @Transactional
     public CategoryDto createCategory(String name, String iconUrl) {
         String iconFilename = parseIconFilenameOrThrow(iconUrl);
         CategoryEntity saved = categoryRepository.save(new CategoryEntity(name, iconFilename));
+        log.info("Category created: id={} — evicting categories cache", saved.getId());
         return categoryEntityToCategoryDtoMapper.map(saved);
     }
 
+    @CacheEvict(cacheNames = CacheConfig.CATEGORIES, allEntries = true)
     @Transactional
     public CategoryDto updateCategory(Long id, String name, String iconUrl, Long actorId) {
         String iconFilename = parseIconFilenameOrThrow(iconUrl);
@@ -65,9 +78,11 @@ public class CategoryService {
         if (updated == 0) {
             throw new NotFoundException(ErrorConstants.Category.NOT_FOUND);
         }
+        log.info("Category updated: id={} — evicting categories cache", id);
         return loadCategoryByIdOrThrow(id);
     }
 
+    @CacheEvict(cacheNames = CacheConfig.CATEGORIES, allEntries = true)
     @Transactional
     public CategoryDto softDeleteCategory(Long id, Long replacementCategoryId, Long actorId) {
         if (replacementCategoryId.equals(id)) {
@@ -92,9 +107,11 @@ public class CategoryService {
         if (updated == 0) {
             throw new ConflictException(ErrorConstants.Category.ALREADY_DELETED);
         }
+        log.info("Category soft-deleted: id={} — evicting categories cache", id);
         return loadCategoryByIdOrThrow(id);
     }
 
+    @CacheEvict(cacheNames = CacheConfig.CATEGORIES, allEntries = true)
     @Transactional
     public CategoryDto restoreCategory(Long id, Long actorId) {
         int updated = categoryRepository.applyRestore(id, actorId, OffsetDateTime.now());
@@ -103,6 +120,7 @@ public class CategoryService {
                     ? new ConflictException(ErrorConstants.Category.NOT_DELETED)
                     : new NotFoundException(ErrorConstants.Category.NOT_FOUND);
         }
+        log.info("Category restored: id={} — evicting categories cache", id);
         return loadCategoryByIdOrThrow(id);
     }
 
