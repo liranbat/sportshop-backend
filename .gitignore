@@ -31,4 +31,5 @@ build/
 ### Local env ###
 .env*
 !.env.example
+!.env.prod.example
 
