@@ -67,6 +67,13 @@ public final class ErrorConstants {
         private Order() {}
     }
 
+    public static final class Sales {
+        public static final String DATE_RANGE_INVALID = "sales.dateRangeInvalid";
+        public static final String DATE_RANGE_TOO_LONG = "sales.dateRangeTooLong";
+
+        private Sales() {}
+    }
+
     public static final class Cart {
         public static final String QTY_MIN_ADD = "cart.qtyMinAdd";
         public static final String PRODUCT_UNAVAILABLE = "cart.productUnavailable";
