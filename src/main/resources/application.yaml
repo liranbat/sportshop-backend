@@ -105,6 +105,9 @@ app:
       stock: 50
   checkout:
     order-number-retries: ${SPORTSHOP_CHECKOUT_ORDER_NUMBER_RETRIES:5}
+  sales:
+    top-products-limit: 5
+    max-date-range: 180d
   payment:
     provider: MOCK_CARD
     currency: USD
