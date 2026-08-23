@@ -14,16 +14,19 @@ import com.java.sadna.backend.sportshop.model.PagedResult;
 import com.java.sadna.backend.sportshop.common.constants.ApiHeaderConstants;
 import com.java.sadna.backend.sportshop.model.UserDto;
 import com.java.sadna.backend.sportshop.common.constants.AuthorityConstants;
+import com.java.sadna.backend.sportshop.common.constants.AsyncConstants;
 import com.java.sadna.backend.sportshop.security.Role;
 import com.java.sadna.backend.sportshop.security.SecurityContextUtils;
 import com.java.sadna.backend.sportshop.service.UserService;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 
 @RestController
 @Slf4j
@@ -33,15 +36,18 @@ public class UserController implements UsersApi, AdminUsersApi {
     private final UserDtoToUserResponseMapper userDtoToUserResponseMapper;
     private final PagedUserDtoToUserListPageMapper pagedUserDtoToUserListPageMapper;
     private final HttpServletResponse httpServletResponse;
+    private final Executor cleanupExecutor;
 
     public UserController(UserService userService,
                           UserDtoToUserResponseMapper userDtoToUserResponseMapper,
                           PagedUserDtoToUserListPageMapper pagedUserDtoToUserListPageMapper,
-                          HttpServletResponse httpServletResponse) {
+                          HttpServletResponse httpServletResponse,
+                          @Qualifier(AsyncConstants.Executors.CLEANUP) Executor cleanupExecutor) {
         this.userService = userService;
         this.userDtoToUserResponseMapper = userDtoToUserResponseMapper;
         this.pagedUserDtoToUserListPageMapper = pagedUserDtoToUserListPageMapper;
         this.httpServletResponse = httpServletResponse;
+        this.cleanupExecutor = cleanupExecutor;
     }
 
     @Override
@@ -159,7 +165,7 @@ public class UserController implements UsersApi, AdminUsersApi {
             } catch (RuntimeException e) {
                 log.warn("Cleanup after {} failed for userId={}: {}", source, userId, e.toString(), e);
             }
-        });
+        }, cleanupExecutor);
     }
 
     private static Boolean toIsAdmin(UserRoleFilter role) {
