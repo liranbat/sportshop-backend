@@ -16,12 +16,14 @@ public interface PaymentRepository extends JpaRepository<PaymentEntity, Long> {
     @Modifying
     @Query(value = """
             UPDATE payments
-               SET status     = 'REFUNDED',
-                   updated_at = NOW(),
-                   updated_by = :userId
+               SET status                = 'REFUNDED',
+                   refund_transaction_id = :refundTransactionId,
+                   updated_at            = NOW(),
+                   updated_by            = :userId
              WHERE order_id = :orderId
                AND status   = 'SUCCESS'
             """, nativeQuery = true)
     int refundIfSuccess(@Param("orderId") Long orderId,
-                        @Param("userId") Long userId);
+                        @Param("userId") Long userId,
+                        @Param("refundTransactionId") String refundTransactionId);
 }

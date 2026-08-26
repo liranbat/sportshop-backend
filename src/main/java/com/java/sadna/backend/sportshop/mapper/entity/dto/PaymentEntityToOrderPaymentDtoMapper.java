@@ -12,7 +12,16 @@ public interface PaymentEntityToOrderPaymentDtoMapper extends BaseMapper<Payment
 
     @Override
     @Mapping(source = "createdAt", target = "processedAt")
+    @Mapping(target = "transactionId", expression = "java(displayTransactionId(entity))")
     @Mapping(target = "refundedAt",
             expression = "java(PaymentStatuses.REFUNDED.equals(entity.getStatus()) ? entity.getUpdatedAt() : null)")
     OrderPaymentDto map(PaymentEntity entity);
+
+    default String displayTransactionId(PaymentEntity entity) {
+        String refundTransactionId = entity.getRefundTransactionId();
+        if (PaymentStatuses.REFUNDED.equals(entity.getStatus()) && refundTransactionId != null) {
+            return refundTransactionId;
+        }
+        return entity.getTransactionId();
+    }
 }
