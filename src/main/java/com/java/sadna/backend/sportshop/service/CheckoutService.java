@@ -41,7 +41,7 @@ public class CheckoutService {
     private final OrderItemRepository orderItemRepository;
     private final PaymentRepository paymentRepository;
     private final OrderNumberGenerator orderNumberGenerator;
-    private final MockPaymentProcessor mockPaymentProcessor;
+    private final PaymentProcessor paymentProcessor;
     private final ImagesProperties imagesProperties;
     private final String paymentProvider;
     private final String paymentCurrency;
@@ -54,7 +54,7 @@ public class CheckoutService {
                            OrderItemRepository orderItemRepository,
                            PaymentRepository paymentRepository,
                            OrderNumberGenerator orderNumberGenerator,
-                           MockPaymentProcessor mockPaymentProcessor,
+                           PaymentProcessor paymentProcessor,
                            ImagesProperties imagesProperties,
                            CheckoutProperties checkoutProperties,
                            PaymentProperties paymentProperties) {
@@ -65,7 +65,7 @@ public class CheckoutService {
         this.orderItemRepository = orderItemRepository;
         this.paymentRepository = paymentRepository;
         this.orderNumberGenerator = orderNumberGenerator;
-        this.mockPaymentProcessor = mockPaymentProcessor;
+        this.paymentProcessor = paymentProcessor;
         this.imagesProperties = imagesProperties;
         this.paymentProvider = paymentProperties.getProvider();
         this.paymentCurrency = paymentProperties.getCurrency();
@@ -170,7 +170,7 @@ public class CheckoutService {
 
         // Decline propagates as BadGatewayException -> @Transactional rolls back the order +
         // items rows; GlobalExceptionHandler returns the 502 ApiError envelope.
-        String transactionId = mockPaymentProcessor.process(request.getPayment(), totalPrice);
+        String transactionId = paymentProcessor.charge(request.getPayment(), totalPrice, paymentCurrency);
 
         paymentRepository.save(new PaymentEntity(
                 orderId,

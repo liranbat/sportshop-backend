@@ -41,6 +41,9 @@ public class PaymentEntity {
     @Column(name = "transaction_id", nullable = false, length = 100)
     private String transactionId;
 
+    @Column(name = "refund_transaction_id", length = 100)
+    private String refundTransactionId;
+
     @Column(name = "created_at", nullable = false, insertable = false, updatable = false)
     private OffsetDateTime createdAt;
 

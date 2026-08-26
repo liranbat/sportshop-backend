@@ -73,6 +73,7 @@ public class OrderService {
     private final OrderRepository orderRepository;
     private final OrderItemRepository orderItemRepository;
     private final PaymentRepository paymentRepository;
+    private final PaymentProcessor paymentProcessor;
     private final ProductStockRepository productStockRepository;
     private final OrderEntityToOrderSummaryDtoMapper orderEntityToOrderSummaryDtoMapper;
     private final OrderItemEntityToOrderItemDtoMapper orderItemEntityToOrderItemDtoMapper;
@@ -84,6 +85,7 @@ public class OrderService {
     public OrderService(OrderRepository orderRepository,
                         OrderItemRepository orderItemRepository,
                         PaymentRepository paymentRepository,
+                        PaymentProcessor paymentProcessor,
                         ProductStockRepository productStockRepository,
                         OrderEntityToOrderSummaryDtoMapper orderEntityToOrderSummaryDtoMapper,
                         OrderItemEntityToOrderItemDtoMapper orderItemEntityToOrderItemDtoMapper,
@@ -94,6 +96,7 @@ public class OrderService {
         this.orderRepository = orderRepository;
         this.orderItemRepository = orderItemRepository;
         this.paymentRepository = paymentRepository;
+        this.paymentProcessor = paymentProcessor;
         this.productStockRepository = productStockRepository;
         this.orderEntityToOrderSummaryDtoMapper = orderEntityToOrderSummaryDtoMapper;
         this.orderItemEntityToOrderItemDtoMapper = orderItemEntityToOrderItemDtoMapper;
@@ -204,6 +207,10 @@ public class OrderService {
             throw new ConflictException(ErrorConstants.Order.CANNOT_BE_CANCELLED);
         }
 
+        PaymentEntity payment = paymentRepository.findByOrderId(order.getId())
+                .orElseThrow(() -> new IllegalStateException(
+                        "Payment row missing for orderNumber=" + orderNumber));
+
         String cancelStatus = isAdmin
                 ? OrderStatusTransitions.CANCELLED_BY_ADMIN
                 : OrderStatusTransitions.CANCELLED_BY_USER;
@@ -230,7 +237,8 @@ public class OrderService {
             }
         }
 
-        int refunded = paymentRepository.refundIfSuccess(order.getId(), actorId);
+        String refundTransactionId = paymentProcessor.refund(payment.getTransactionId());
+        int refunded = paymentRepository.refundIfSuccess(order.getId(), actorId, refundTransactionId);
         if (refunded == 0) {
             log.error("Payment refund invariant break: orderId={} actorId={}", order.getId(), actorId);
             throw new IllegalStateException(MSG_PAYMENT_REFUND_INVARIANT);
