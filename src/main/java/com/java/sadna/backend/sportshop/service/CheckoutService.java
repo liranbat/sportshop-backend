@@ -1,6 +1,7 @@
 package com.java.sadna.backend.sportshop.service;
 
 import com.java.sadna.backend.sportshop.common.constants.ErrorConstants;
+import com.java.sadna.backend.sportshop.common.util.MoneyUtil;
 import com.java.sadna.backend.sportshop.common.util.OrderStatusTransitions;
 import com.java.sadna.backend.sportshop.common.util.PaymentStatuses;
 import com.java.sadna.backend.sportshop.config.CheckoutProperties;
@@ -115,7 +116,7 @@ public class CheckoutService {
         }
 
         BigDecimal totalPrice = rows.stream()
-                .map(r -> r.getProductPrice().multiply(BigDecimal.valueOf(r.getQuantity())))
+                .map(r -> MoneyUtil.lineTotal(r.getProductPrice(), r.getQuantity()))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         int itemCount = rows.size();
 

@@ -6,10 +6,12 @@ import com.java.sadna.backend.sportshop.model.OrderItemDto;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
-@Mapper(componentModel = "spring", imports = java.math.BigDecimal.class)
+@Mapper(componentModel = "spring", imports = {
+        com.java.sadna.backend.sportshop.common.util.MoneyUtil.class
+})
 public interface OrderItemEntityToOrderItemDtoMapper extends BaseMapper<OrderItemEntity, OrderItemDto> {
 
     @Override
-    @Mapping(target = "lineTotal", expression = "java(entity.getPricePerUnit().multiply(BigDecimal.valueOf(entity.getQuantity())))")
+    @Mapping(target = "lineTotal", expression = "java(MoneyUtil.lineTotal(entity.getPricePerUnit(), entity.getQuantity()))")
     OrderItemDto map(OrderItemEntity entity);
 }

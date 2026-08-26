@@ -1,5 +1,6 @@
 package com.java.sadna.backend.sportshop.mapper.dto.dto;
 
+import com.java.sadna.backend.sportshop.common.util.MoneyUtil;
 import com.java.sadna.backend.sportshop.mapper.BaseMapper;
 import com.java.sadna.backend.sportshop.model.CartItemDto;
 import com.java.sadna.backend.sportshop.model.CartViewRowDto;
@@ -18,7 +19,7 @@ public class CartViewRowDtoToCartItemDtoMapper implements BaseMapper<CartViewRow
         boolean archived = Boolean.TRUE.equals(row.getProductArchived());
         int versionInCart = row.getProductVersionInCart() != null ? row.getProductVersionInCart() : 0;
         int versionCurrent = row.getProductVersionCurrent() != null ? row.getProductVersionCurrent() : versionInCart;
-        BigDecimal lineTotal = price.multiply(BigDecimal.valueOf(quantity));
+        BigDecimal lineTotal = MoneyUtil.lineTotal(price, quantity);
 
         return new CartItemDto(
                 row.getProductId(),
